@@ -26,3 +26,4 @@ run editor "step=editor" 300
 run breit "step=card&w=1300&cfg=%7B%22meals%22%3A%5B%22lunch%22%2C%22snack%22%2C%22dinner%22%5D%2C%22show_header%22%3Afalse%7D" 640 1360
 run schmal-3spalten "step=card&w=370" 900 420
 run details-zu "step=remove" 760
+run stable "step=stable" 900

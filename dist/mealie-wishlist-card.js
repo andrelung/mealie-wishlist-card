@@ -7,7 +7,7 @@
  */
 (() => {
 "use strict";
-const MW_VERSION = "0.2.0";
+const MW_VERSION = "0.2.1";
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "side", "dessert", "snack", "drink"];
 const PICKER_SECTIONS = ["search", "favorites_random", "most_cooked", "not_cooked_lately", "random"];
@@ -395,8 +395,12 @@ class MealieWishlistCard extends HTMLElement {
     const header = c.show_header && (title || subtitle || c.icon)
       ? `<div class="header">${c.icon ? `<div class="hicon"><ha-icon icon="${esc(c.icon)}"></ha-icon></div>` : ""}${title ? `<div class="title">${esc(title)}</div>` : ""}${subtitle ? `<div class="subtitle">${esc(subtitle)}</div>` : ""}</div>`
       : "";
+    const oldBody = this.shadowRoot.querySelector(".dbody");
+    const keepScroll = oldBody ? oldBody.scrollTop : 0;
     this.shadowRoot.innerHTML = `<style>${STYLE}</style><ha-card style="--cols:${cols}${c.max_width ? `;--mealie-wishlist-max-width:${esc(c.max_width)}` : ""}">${header}${body}</ha-card>${this._dialogHtml()}`;
     this._applyWidth();
+    const newBody = this.shadowRoot.querySelector(".dbody");
+    if (newBody && keepScroll) newBody.scrollTop = keepScroll;
     this._bind();
     if (this._dialog?.focusSearch) {
       const inp = this.shadowRoot.querySelector("input.q");
@@ -417,7 +421,7 @@ class MealieWishlistCard extends HTMLElement {
       let secs = "";
       if (dlg.loading) secs = `<div class="msg">${esc(t.loading)}</div>`;
       else {
-        const s = this._sections();
+        const s = dlg.sections || (dlg.sections = this._sections());
         for (const p of c.picker) {
           if (p === "search") {
             const q = dlg.q || "";
@@ -438,7 +442,7 @@ class MealieWishlistCard extends HTMLElement {
           } else {
             const items = s[p] || [];
             const reshuffle = p === "random" || p === "favorites_random";
-            secs += `<div class="sec"><h3><span class="si">${svg(ICONS[p], 16)}</span>${esc(t[p])}${reshuffle ? `<button class="mix" data-act="shuffle">${svg(ICONS.random, 14)} ${esc(t.shuffle)}</button>` : ""}</h3>${
+            secs += `<div class="sec"><h3><span class="si">${svg(ICONS[p], 16)}</span>${esc(t[p])}${reshuffle ? `<button class="mix" data-act="shuffle" data-sec="${p}">${svg(ICONS.random, 14)} ${esc(t.shuffle)}</button>` : ""}</h3>${
               items.length ? `<div class="tiles" style="--n:${Math.min(c.picker_items, 4)}">${items.map(({ r, sub }) => {
                 const img = this._img(r);
                 return `<button class="tile" data-act="pick" data-rid="${esc(r.recipe_id)}">${img ? `<img src="${esc(img)}" alt="" loading="lazy" onerror="this.remove()">` : `<div class="ph">${svg(ICONS.fork, 22)}</div>`}<span>${esc(r.name)}</span><small>${esc(sub)}</small></button>`;
@@ -549,7 +553,7 @@ class MealieWishlistCard extends HTMLElement {
         return;
       }
       case "close": case "backdrop": this._dialog = null; return this._render();
-      case "shuffle": return this._render();
+      case "shuffle": { const d = this._dialog; if (d?.sections && ds.sec) d.sections = { ...d.sections, [ds.sec]: this._sections()[ds.sec] }; return this._render(); }
       case "pick": {
         const r = this._findRecipe(ds.rid);
         if (!r) return;

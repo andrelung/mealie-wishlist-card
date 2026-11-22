@@ -72,6 +72,18 @@ window.addEventListener('error',e=>document.title='JSERROR '+e.message);
  if(step!=='card'){
    click('.wish');
    await wait(200);
+   if(step==='stable'){
+     const order=()=>[...sr.querySelectorAll('.sec')].map(s=>[...s.querySelectorAll('.tile span')].map(x=>x.textContent).join('|'));
+     const a=order();
+     const inp=sr.querySelector('input.q'); inp.value='g'; inp.dispatchEvent(new Event('input')); await wait(50);
+     inp.value=''; inp.dispatchEvent(new Event('input')); await wait(50);
+     card._lastFetch=0; card.hass=hass; await wait(150);
+     const b=order();
+     const same=JSON.stringify(a)===JSON.stringify(b);
+     let others=true;
+     for(let i=0;i<5;i++){ sr.querySelector('.mix[data-sec=random]').click(); await wait(20); const c=order(); if(c[0]!==a[0]||c[1]!==a[1]||c[2]!==a[2]) others=false; }
+     if(!same||!others) throw new Error('Reihenfolge instabil '+JSON.stringify({same,others}));
+   }
    if(step==='search'||step==='confirm'||step==='commit'){
      const inp=sr.querySelector('input.q'); inp.value='gno'; inp.dispatchEvent(new Event('input')); await wait(100);
    }
