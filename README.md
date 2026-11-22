@@ -88,6 +88,7 @@ url: https://mealie.example.com        # for images and "Open in Mealie"
 | `max_width` | – | Optional maximum width, e.g. `900px` (the card is centred) |
 | `tile_min_height` | `64` | Minimum height of the recipe tiles / wish buttons in px |
 | `allow_free_text` | `true` | Search without result: offer to add the typed name as a meal |
+| `allow_create_recipe` | `true` | Search without result: offer the link to Mealie's *Create recipe* form (needs `url`) |
 
 Theme variables: `--mealie-wishlist-accent` (defaults to `--primary-color`), `--mealie-wishlist-text-backdrop` (opacity of the text strip over recipe images, default `70%`), `--mealie-wishlist-max-width` (defaults to a width that fits the number of meal columns; the card is centred). In a narrow column the meals wrap below each day with a small label.
 

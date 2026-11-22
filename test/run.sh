@@ -32,3 +32,7 @@ run note "step=note" 760
 run note-ansicht "step=note&shot=1" 640
 run minh "step=minh&cfg=%7B%22tile_min_height%22%3A120%7D" 900
 run bilder "step=card&img=1&cfg=%7B%22url%22%3A%22https%3A%2F%2Frezepte.andrelung.de%22%2C%22tile_min_height%22%3A140%7D" 900 760
+run opt-beide "step=noteopts&exp=NL&cfg=%7B%22url%22%3A%22https%3A%2F%2Fm.example%22%7D" 300
+run opt-nur-notiz "step=noteopts&exp=N&cfg=%7B%22url%22%3A%22https%3A%2F%2Fm.example%22%2C%22allow_create_recipe%22%3Afalse%7D" 300
+run opt-nur-link "step=noteopts&exp=L&cfg=%7B%22url%22%3A%22https%3A%2F%2Fm.example%22%2C%22allow_free_text%22%3Afalse%7D" 300
+run opt-keine "step=noteopts&exp=&cfg=%7B%22url%22%3A%22https%3A%2F%2Fm.example%22%2C%22allow_free_text%22%3Afalse%2C%22allow_create_recipe%22%3Afalse%7D" 300

@@ -7,7 +7,7 @@
  */
 (() => {
 "use strict";
-const MW_VERSION = "0.3.1";
+const MW_VERSION = "0.3.2";
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "side", "dessert", "snack", "drink"];
 const PICKER_SECTIONS = ["search", "favorites_random", "most_cooked", "not_cooked_lately", "random"];
@@ -138,6 +138,7 @@ const DEFAULTS = {
   confirm_wish: false,
   tile_min_height: 64,
   allow_free_text: true,
+  allow_create_recipe: true,
   language: undefined,
 };
 
@@ -182,6 +183,7 @@ class MealieWishlistCard extends HTMLElement {
           { name: "favorites_min_rating", selector: { number: { min: 1, max: 5, step: 0.5, mode: "box" } } },
           { name: "confirm_wish", selector: { boolean: {} } },
           { name: "allow_free_text", selector: { boolean: {} } },
+          { name: "allow_create_recipe", selector: { boolean: {} } },
         ] },
         { type: "expandable", name: "", title: "Planned recipes", flatten: true, schema: [
           { name: "recipe_tap_action", selector: { select: { mode: "dropdown", options: [
@@ -201,7 +203,7 @@ class MealieWishlistCard extends HTMLElement {
         days: "Number of days", meals: "Meals (columns)", wish_label: "Wish button text", picker: "Picker sections (order)",
         picker_items: "Recipes per section", history_days: "History for statistics (days)", favorites_min_rating: "Favourite = rating at least",
         confirm_wish: "Ask before wishing", recipe_tap_action: "Tap on planned recipe", allow_change: "Allow swapping",
-        allow_remove: "Allow removing", show_images: "Show images", max_width: "Max. width (e.g. 900px, optional)", tile_min_height: "Min. height of recipe tiles", allow_free_text: "Search without result: allow adding the name as meal", url: "Mealie URL (images, links)", language: "Language",
+        allow_remove: "Allow removing", show_images: "Show images", max_width: "Max. width (e.g. 900px, optional)", tile_min_height: "Min. height of recipe tiles", allow_free_text: "No search result: offer 'Add name as meal'", allow_create_recipe: "No search result: offer 'Create recipe in Mealie' (needs URL)", url: "Mealie URL (images, links)", language: "Language",
       }[s.name]),
     };
   }
@@ -454,7 +456,7 @@ class MealieWishlistCard extends HTMLElement {
                 const k = counts.get(r.recipe_id), l = last.get(r.recipe_id);
                 const sub = k ? t.times(k) : l ? t.ago(this._daysAgo(l)) : "";
                 return `<button class="hit" data-act="pick" data-rid="${esc(r.recipe_id)}"><span>${hl}</span><small>${esc(sub)}</small></button>`;
-              }).join("") : `<div class="none">${esc(t.no_results)}</div>${c.allow_free_text ? `<button class="hit add" data-act="note"><span>${svg(ICONS.plus, 18)} ${esc(t.add_note(q.trim()))}</span><small>${esc(t.add_note_hint)}</small></button>` : ""}${c.url ? `<a class="hit add" href="${esc(`${c.url}/g/${encodeURIComponent(c.mealie_group_slug || "home")}/r/create/new`)}" target="_blank" rel="noopener"><span>${svg(ICONS.open, 18)} ${esc(t.create_recipe)}</span><small></small></a>` : ""}`}</div>`;
+              }).join("") : `<div class="none">${esc(t.no_results)}</div>${c.allow_free_text ? `<button class="hit add" data-act="note"><span>${svg(ICONS.plus, 18)} ${esc(t.add_note(q.trim()))}</span><small>${esc(t.add_note_hint)}</small></button>` : ""}${c.allow_create_recipe && c.url ? `<a class="hit add" href="${esc(`${c.url}/g/${encodeURIComponent(c.mealie_group_slug || "home")}/r/create/new`)}" target="_blank" rel="noopener"><span>${svg(ICONS.open, 18)} ${esc(t.create_recipe)}</span><small></small></a>` : ""}`}</div>`;
             }
             secs += `<div class="search">${svg(ICONS.search, 18)}<input class="q" type="search" enterkeyhint="search" autocomplete="off" placeholder="${esc(t.search)}" value="${esc(q)}"></div>${ac}`;
           } else {
@@ -715,7 +717,7 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 const EDITOR_DEFAULTS = {
   show_header: true, icon: DEFAULTS.icon, days: DEFAULTS.days, meals: DEFAULTS.meals, picker: DEFAULTS.picker,
   picker_items: DEFAULTS.picker_items, history_days: DEFAULTS.history_days, favorites_min_rating: DEFAULTS.favorites_min_rating,
-  confirm_wish: false, tile_min_height: 64, allow_free_text: true, recipe_tap_action: "details", allow_change: true, allow_remove: true, show_images: true,
+  confirm_wish: false, tile_min_height: 64, allow_free_text: true, allow_create_recipe: true, recipe_tap_action: "details", allow_change: true, allow_remove: true, show_images: true,
 };
 
 class MealieWishlistCardEditor extends HTMLElement {

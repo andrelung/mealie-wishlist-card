@@ -87,6 +87,11 @@ window.addEventListener('error',e=>document.title='JSERROR '+e.message);
      for(let i=0;i<5;i++){ sr.querySelector('.mix[data-sec=random]').click(); await wait(20); const c=order(); if(c[0]!==a[0]||c[1]!==a[1]||c[2]!==a[2]) others=false; }
      if(!same||!others) throw new Error('Reihenfolge instabil '+JSON.stringify({same,others}));
    }
+   if(step==='noteopts'){
+     const inp=sr.querySelector('input.q'); inp.value='Pizza'; inp.dispatchEvent(new Event('input')); await wait(100);
+     const got=(sr.querySelector('[data-act=note]')?'N':'')+(sr.querySelector('a.hit.add')?'L':'');
+     if(got!==P.get('exp')) throw new Error('Optionen '+got+' statt '+P.get('exp'));
+   }
    if(step==='note'){
      const inp=sr.querySelector('input.q'); inp.value='Pizza Margherita'; inp.dispatchEvent(new Event('input')); await wait(100);
      if(P.get('shot')) { document.title='OK shot'; return; }
