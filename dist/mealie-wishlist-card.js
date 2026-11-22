@@ -7,7 +7,7 @@
  */
 (() => {
 "use strict";
-const MW_VERSION = "0.7.0";
+const MW_VERSION = "0.7.1";
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "side", "dessert", "snack", "drink"];
 const PICKER_SECTIONS = ["search", "pinned", "favorites_random", "most_cooked", "not_cooked_lately", "random"];
@@ -420,9 +420,13 @@ class MealieWishlistCard extends HTMLElement {
     } catch (e) {
       this._error = e?.message || String(e);
     }
+    const key = JSON.stringify([this._plan, this._error, this._dayKey]);
+    const changed = key !== this._renderKey || !this._loaded;
+    this._renderKey = key;
     this._loaded = true;
     this._busy = false;
-    this._render();
+    if (changed && !this._dialog) this._render();
+    else if (changed) this._dirty = true;
   }
 
   async _ensurePickerData(force = false) {
@@ -585,19 +589,7 @@ class MealieWishlistCard extends HTMLElement {
         for (const p of c.picker) {
           if (p === "search") {
             const q = dlg.q || "";
-            let ac = "";
-            if (q.trim().length >= 1) {
-              const nq = norm(q);
-              const hits = (dlg.remote && dlg.remoteQ === q ? dlg.remote : (this._recipes || []).filter((r) => norm(r.name).includes(nq))).slice(0, 6);
-              const { counts, last } = this._stats();
-              ac = `<div class="ac">${hits.length ? hits.map((r) => {
-                const n = r.name, i = norm(n).indexOf(nq);
-                const hl = i >= 0 ? `${esc(n.slice(0, i))}<em>${esc(n.slice(i, i + q.length))}</em>${esc(n.slice(i + q.length))}` : esc(n);
-                const k = counts.get(r.recipe_id), l = last.get(r.recipe_id);
-                const sub = k ? t.times(k) : l ? t.ago(this._daysAgo(l)) : "";
-                return `<button class="hit" data-act="pick" data-rid="${esc(r.recipe_id)}"><span>${hl}</span><small>${esc(sub)}</small></button>`;
-              }).join("") : `<div class="none">${esc(t.no_results)}</div>`}${c.allow_free_text ? `<button class="hit add" data-act="note"><span>${svg(ICONS.plus, 18)} ${esc(t.add_note(q.trim()))}</span><small>${esc(t.add_note_hint)}</small></button>` : ""}${c.allow_create_recipe && c.url ? `<a class="hit add" href="${esc(`${c.url}/g/${encodeURIComponent(c.mealie_group_slug || "home")}/r/create/new`)}" target="_blank" rel="noopener"><span>${svg(ICONS.open, 18)} ${esc(t.create_recipe)}</span><small></small></a>` : ""}</div>`;
-            }
+            const ac = this._acHtml(q);
             secs += `<div class="search">${svg(ICONS.search, 18)}<input class="q" type="search" enterkeyhint="search" autocomplete="off" placeholder="${esc(t.search)}" value="${esc(q)}"></div>${ac}`;
           } else {
             const items = s[p] || [];
@@ -678,8 +670,7 @@ class MealieWishlistCard extends HTMLElement {
     if (q) {
       q.addEventListener("input", () => {
         this._dialog.q = q.value;
-        this._dialog.focusSearch = true;
-        this._render();
+        this._updateAc();
         this._remoteSearch(q.value);
       });
       q.addEventListener("keydown", (ev) => {
@@ -689,13 +680,42 @@ class MealieWishlistCard extends HTMLElement {
     }
   }
 
+  _acHtml(q) {
+    const dlg = this._dialog, c = this._config, t = this._t;
+    if (!dlg) return "";
+            if (q.trim().length >= 1) {
+              const nq = norm(q);
+              const hits = (dlg.remote && dlg.remoteQ === q ? dlg.remote : (this._recipes || []).filter((r) => norm(r.name).includes(nq))).slice(0, 6);
+              const { counts, last } = this._stats();
+              return `<div class="ac">${hits.length ? hits.map((r) => {
+                const n = r.name, i = norm(n).indexOf(nq);
+                const hl = i >= 0 ? `${esc(n.slice(0, i))}<em>${esc(n.slice(i, i + q.length))}</em>${esc(n.slice(i + q.length))}` : esc(n);
+                const k = counts.get(r.recipe_id), l = last.get(r.recipe_id);
+                const sub = k ? t.times(k) : l ? t.ago(this._daysAgo(l)) : "";
+                return `<button class="hit" data-act="pick" data-rid="${esc(r.recipe_id)}"><span>${hl}</span><small>${esc(sub)}</small></button>`;
+              }).join("") : `<div class="none">${esc(t.no_results)}</div>`}${c.allow_free_text ? `<button class="hit add" data-act="note"><span>${svg(ICONS.plus, 18)} ${esc(t.add_note(q.trim()))}</span><small>${esc(t.add_note_hint)}</small></button>` : ""}${c.allow_create_recipe && c.url ? `<a class="hit add" href="${esc(`${c.url}/g/${encodeURIComponent(c.mealie_group_slug || "home")}/r/create/new`)}" target="_blank" rel="noopener"><span>${svg(ICONS.open, 18)} ${esc(t.create_recipe)}</span><small></small></a>` : ""}</div>`;
+            }
+    return "";
+  }
+
+  _updateAc() {
+    const root = this.shadowRoot, search = root.querySelector(".search");
+    if (!search || !this._dialog) return this._render();
+    const old = root.querySelector(".ac");
+    const tpl = document.createElement("template");
+    tpl.innerHTML = this._acHtml(this._dialog.q || "");
+    const neu = tpl.content.firstElementChild;
+    if (old && neu) old.replaceWith(neu); else if (old) old.remove(); else if (neu) search.after(neu);
+    neu?.querySelectorAll("[data-act]").forEach((el) => el.addEventListener("click", (ev) => { ev.stopPropagation(); this._act(el.dataset.act, el.dataset); }));
+  }
+
   _remoteSearch(q) {
     if (!this._recipesTruncated || q.trim().length < 2) return;
     clearTimeout(this._searchTimer);
     this._searchTimer = setTimeout(async () => {
       try {
         const r = await this._call("get_recipes", { search_terms: q, result_limit: 10 });
-        if (this._dialog && this._dialog.q === q) { this._dialog.remote = r?.recipes?.items || []; this._dialog.remoteQ = q; this._dialog.focusSearch = true; this._render(); }
+        if (this._dialog && this._dialog.q === q) { this._dialog.remote = r?.recipes?.items || []; this._dialog.remoteQ = q; this._updateAc(); }
       } catch (e) { /* ignore, local results stay */ }
     }, 300);
   }
@@ -752,7 +772,7 @@ class MealieWishlistCard extends HTMLElement {
         }
         return;
       }
-      case "close": case "backdrop": this._dialog = null; return this._render();
+      case "close": case "backdrop": this._dialog = null; this._dirty = false; return this._render();
       case "shuffle": { const d = this._dialog; if (d?.sections && ds.sec) d.sections = { ...d.sections, [ds.sec]: this._sections()[ds.sec] }; return this._render(); }
       case "pinnote": {
         const name = c.pinned_notes[parseInt(ds.i, 10)];
@@ -824,12 +844,15 @@ ha-card{display:block;padding:16px 16px 8px;overflow:hidden;max-width:var(--meal
 button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:pointer;text-align:left}
 .meal{display:flex;flex-direction:column;border-radius:12px;background:var(--secondary-background-color,#f1f2f4);overflow:hidden;min-height:var(--mw-tile-min-h,64px);flex:1;color:var(--primary-text-color)}
 .meal{position:relative}
-.meal img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-.meal span{position:relative;padding:8px 10px;font-size:.88rem;line-height:1.25;overflow-wrap:anywhere}
+.meal img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit}
+.meal span{position:relative;z-index:1;padding:8px 10px;font-size:.88rem;line-height:1.25;overflow-wrap:anywhere}
 .meal.has-img{justify-content:flex-end}
 .meal.has-img span{background:color-mix(in srgb,var(--card-background-color,#fff) var(--mealie-wishlist-text-backdrop,70%),transparent);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
 .wish{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:var(--mw-tile-min-h,64px);border-radius:12px;border:2px dashed var(--mw-accent);background:color-mix(in srgb,var(--mw-accent) 9%,transparent);color:var(--mw-accent);font-weight:600;font-size:.9rem;text-align:center;padding:6px}
-.wish:hover,.meal:hover,.tile:hover,.hit:hover{filter:brightness(.97)}
+.wish,.meal,.tile,.hit{position:relative;isolation:isolate}
+.wish::after,.meal::after,.tile::after,.hit::after{content:"";position:absolute;inset:0;border-radius:inherit;background:currentColor;opacity:0;pointer-events:none;z-index:2}
+@media (hover:hover){.wish:hover::after,.meal:hover::after,.tile:hover::after,.hit:hover::after{opacity:.06}}
+.wish:active::after,.meal:active::after,.tile:active::after,.hit:active::after{opacity:.1}
 .wish:focus-visible,.meal:focus-visible,.tile:focus-visible{outline:3px solid color-mix(in srgb,var(--mw-accent) 45%,transparent)}
 .lbl{display:none;font-size:.72rem;font-weight:500;color:var(--secondary-text-color);margin-bottom:2px}
 .wish .lbl{color:inherit;opacity:.8;margin:0}
@@ -1059,7 +1082,7 @@ class MealieNextMealCard extends HTMLElement {
     }
     const color = String(c.color || "orange");
     const cssColor = /^(#|rgb|var\()/.test(color) ? color : `var(--${color}-color, var(--state-icon-color, var(--primary-color)))`;
-    this.shadowRoot.innerHTML = `<style>
+    const html = `<style>
       :host{display:block;height:100%}
       ha-card{height:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px 10px;cursor:pointer;text-align:center;overflow:hidden}
       ha-card:focus-visible{outline:2px solid var(--primary-color)}
@@ -1073,6 +1096,9 @@ class MealieNextMealCard extends HTMLElement {
       <div class="name">${esc(c.name ?? T.name)}</div>
       ${line ? `<div class="next" title="${esc(this._title || line)}">${esc(line)}</div>` : ""}
     </ha-card>`;
+    if (html === this._lastHtml) return;
+    this._lastHtml = html;
+    this.shadowRoot.innerHTML = html;
     const card = this.shadowRoot.querySelector("ha-card");
     const go = () => {
       const path = c.navigation_path;

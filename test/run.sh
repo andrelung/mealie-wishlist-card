@@ -44,3 +44,5 @@ run naechstes "step=nextmeal&exp=Heute%20%C2%B7%20&nav=/mealie-wishlist&cfg=%7B%
 run naechstes-alle "step=nextmeal&exp=%C2%B7&cfg=%7B%7D" 300 340
 run opt-mit-treffern "step=noteopts&q=gno&exp=NL&cfg=%7B%22url%22%3A%22https%3A%2F%2Fm.example%22%7D" 300
 run focus "step=focus" 300
+run norerender "step=norerender&exp=set_mealplan" 300
+/home/hermes/.hermes/tools/node-26.12.1-linux-arm64/bin/node "$(dirname "$0")/hover.js" | tail -1

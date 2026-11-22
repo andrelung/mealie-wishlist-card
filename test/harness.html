@@ -91,6 +91,19 @@ window.addEventListener('error',e=>document.title='JSERROR '+e.message);
    return;
  }
  if(step==='minh'){ const h=getComputedStyle(sr.querySelector('.wish')).minHeight; if(h!=='120px') throw new Error('minHeight '+h); }
+ if(step==='norerender'){
+   const w=sr.querySelector('.wish'); card._lastFetch=0; card.hass={...hass}; await wait(150);
+   if(sr.querySelector('.wish')!==w) throw new Error('Karte neu gezeichnet ohne Aenderung');
+   click('.wish'); await wait(200);
+   const inp=sr.querySelector('input.q'), sec=sr.querySelector('.sec');
+   inp.value='g'; inp.dispatchEvent(new Event('input')); await wait(50);
+   inp.value='gn'; inp.dispatchEvent(new Event('input')); await wait(50);
+   if(sr.querySelector('input.q')!==inp||sr.querySelector('.sec')!==sec) throw new Error('Popup neu gezeichnet beim Tippen');
+   if(sr.activeElement!==inp) throw new Error('Fokus verloren');
+   if(!sr.querySelector('.ac .hit')) throw new Error('keine Treffer');
+   sr.querySelector('.ac .hit[data-act=pick]').click(); await wait(200);
+   document.title='OK '+JSON.stringify(CALLS.map(c=>c.service)); return;
+ }
  if(step!=='card'){
    click('.wish');
    await wait(200);
