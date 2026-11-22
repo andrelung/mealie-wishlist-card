@@ -18,7 +18,7 @@ A Home Assistant dashboard card for [Mealie](https://mealie.io). It shows your m
   - most cooked (counted from your meal plan history)
   - not cooked in a while (meal plan history and Mealie's "last made")
   - random recipes
-- Search without a result: add the typed name as a meal (meal plan note without recipe) or jump to *Create recipe* in Mealie
+- Search: add the typed name as a meal (meal plan note without recipe) or jump to *Create recipe* in Mealie
 - Tap a recipe and it is wished – an optional confirmation can be switched on
 - Tap on a planned recipe: details (image, description; times, servings and ingredients behind a *Details* toggle) with *Open in Mealie*, *Swap meal* and *Remove from plan* – each action can be disabled, or the tap can open Mealie / the picker directly / do nothing
 - Header (title, subtitle, icon) freely configurable, each part can be hidden
@@ -108,8 +108,8 @@ url: https://mealie.example.com        # for images and "Open in Mealie"
 | `language` | HA language | `de` or `en` |
 | `max_width` | – | Optional maximum width of the **whole card**, e.g. `900px` (the card is centred) |
 | `tile_min_height` | `64` | Minimum height of **each slot** (recipe tile or wish button) in px |
-| `allow_free_text` | `true` | Search without result: offer to add the typed name as a meal |
-| `allow_create_recipe` | `true` | Search without result: offer the link to Mealie's *Create recipe* form (needs `url`) |
+| `allow_free_text` | `true` | Search: always offer to add the typed name as a meal (below the results) |
+| `allow_create_recipe` | `true` | Search: always offer the link to Mealie's *Create recipe* form (needs `url`) |
 
 Theme variables: `--mealie-wishlist-accent` (defaults to `--primary-color`), `--mealie-wishlist-text-backdrop` (opacity of the text strip over recipe images, default `70%`), `--mealie-wishlist-max-width` (defaults to a width that fits the number of meal columns; the card is centred). In a narrow column the meals wrap below each day with a small label.
 

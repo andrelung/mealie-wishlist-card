@@ -7,7 +7,7 @@
  */
 (() => {
 "use strict";
-const MW_VERSION = "0.6.1";
+const MW_VERSION = "0.6.2";
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "side", "dessert", "snack", "drink"];
 const PICKER_SECTIONS = ["search", "pinned", "favorites_random", "most_cooked", "not_cooked_lately", "random"];
@@ -175,7 +175,7 @@ const EDITOR_I18N = {
       days: "Anzahl Tage", meals: "Mahlzeiten (Spalten)", wish_label: "Text auf dem Wunsch-Knopf",
       picker: "Bereiche der Auswahl (Reihenfolge)", pinned_title: "Feste Optionen: Überschrift", pinned_category_ids: "Feste Optionen: Mealie-Kategorien", pinned_tag_ids: "Feste Optionen: Mealie-Tags", pinned_recipe_ids: "Feste Optionen: einzelne Rezepte", pinned_notes: "Feste Optionen: ohne Rezept", pinned_exclude_elsewhere: "Feste Optionen nicht in anderen Bereichen zeigen", picker_items: "Rezepte pro Bereich", history_days: "Zeitraum für Statistik (Tage)",
       favorites_min_rating: "Lieblingsrezept ab Bewertung", confirm_wish: "Vor dem Eintragen nachfragen",
-      allow_free_text: "Ohne Treffer: „Name als Essen eintragen“ anbieten", allow_create_recipe: "Ohne Treffer: „Rezept in Mealie anlegen“ anbieten",
+      allow_free_text: "Suche: „Name als Essen eintragen“ anbieten", allow_create_recipe: "Suche: „Rezept in Mealie anlegen“ anbieten",
       recipe_tap_action: "Tippen auf ein geplantes Rezept", allow_open_mealie: "„In Mealie öffnen“ erlauben", allow_change: "Tauschen erlauben", allow_remove: "Entfernen erlauben",
       show_images: "Rezeptbilder in den Kacheln", max_width: "Maximale Breite der ganzen Karte (optional)", tile_min_height: "Mindesthöhe jeder Kachel",
       url: "Mealie-Adresse", language: "Sprache",
@@ -200,8 +200,8 @@ const EDITOR_I18N = {
       history_days: "So weit zurück wird der Speiseplan für „Meist gekocht“ und „Lange nicht gekocht“ ausgewertet.",
       favorites_min_rating: "Rezepte mit mindestens dieser Sternebewertung zählen automatisch als Lieblingsrezept.",
       confirm_wish: "An: Nach dem Antippen eines Rezepts kommt erst eine Rückfrage „… wünschen?“. Aus: Das Rezept wird sofort eingetragen.",
-      allow_free_text: "Findet die Suche nichts, kann der eingetippte Name als Essen ohne Rezept (Notiz) in den Plan.",
-      allow_create_recipe: "Findet die Suche nichts, öffnet ein Link das Formular „Neues Rezept“ in Mealie. Braucht die Mealie-Adresse.",
+      allow_free_text: "Unter den Suchtreffern: der eingetippte Name kann als Essen ohne Rezept (Notiz) in den Plan.",
+      allow_create_recipe: "Unter den Suchtreffern: ein Link öffnet das Formular „Neues Rezept“ in Mealie. Braucht die Mealie-Adresse.",
       recipe_tap_action: "Was beim Antippen eines bereits geplanten Essens passiert.",
       allow_open_mealie: "Zeigt in der Detailansicht „In Mealie öffnen“ (öffnet das Rezept in Mealie). Braucht die Mealie-Adresse.",
       allow_change: "Erlaubt in der Detailansicht „Essen tauschen“.",
@@ -222,7 +222,7 @@ const EDITOR_I18N = {
       days: "Number of days", meals: "Meals (columns)", wish_label: "Wish button text",
       picker: "Picker sections (order)", pinned_title: "Pinned: heading", pinned_category_ids: "Pinned: Mealie categories", pinned_tag_ids: "Pinned: Mealie tags", pinned_recipe_ids: "Pinned: single recipes", pinned_notes: "Pinned: without recipe", pinned_exclude_elsewhere: "Hide pinned options from other sections", picker_items: "Recipes per section", history_days: "History for statistics (days)",
       favorites_min_rating: "Favourite from rating", confirm_wish: "Ask before adding",
-      allow_free_text: "No result: offer 'Add name as meal'", allow_create_recipe: "No result: offer 'Create recipe in Mealie'",
+      allow_free_text: "Search: offer 'Add name as meal'", allow_create_recipe: "Search: offer 'Create recipe in Mealie'",
       recipe_tap_action: "Tap on a planned recipe", allow_open_mealie: "Allow open in Mealie", allow_change: "Allow swapping", allow_remove: "Allow removing",
       show_images: "Recipe images in tiles", max_width: "Maximum width of the whole card (optional)", tile_min_height: "Minimum height of each tile",
       url: "Mealie URL", language: "Language",
@@ -247,8 +247,8 @@ const EDITOR_I18N = {
       history_days: "How far back the meal plan is analysed for 'Most cooked' and 'Not cooked in a while'.",
       favorites_min_rating: "Recipes with at least this star rating automatically count as favourites.",
       confirm_wish: "On: tapping a recipe first asks 'Wish …?'. Off: the recipe is added right away.",
-      allow_free_text: "If the search finds nothing, the typed name can be added as a meal without recipe (note).",
-      allow_create_recipe: "If the search finds nothing, a link opens Mealie's 'New recipe' form. Needs the Mealie URL.",
+      allow_free_text: "Below the search results: the typed name can be added as a meal without recipe (note).",
+      allow_create_recipe: "Below the search results: a link opens Mealie's 'New recipe' form. Needs the Mealie URL.",
       recipe_tap_action: "What happens when a planned meal is tapped.",
       allow_open_mealie: "Shows 'Open in Mealie' in the details (opens the recipe in Mealie). Needs the Mealie URL.",
       allow_change: "Allows 'Swap meal' in the details.",
@@ -592,7 +592,7 @@ class MealieWishlistCard extends HTMLElement {
                 const k = counts.get(r.recipe_id), l = last.get(r.recipe_id);
                 const sub = k ? t.times(k) : l ? t.ago(this._daysAgo(l)) : "";
                 return `<button class="hit" data-act="pick" data-rid="${esc(r.recipe_id)}"><span>${hl}</span><small>${esc(sub)}</small></button>`;
-              }).join("") : `<div class="none">${esc(t.no_results)}</div>${c.allow_free_text ? `<button class="hit add" data-act="note"><span>${svg(ICONS.plus, 18)} ${esc(t.add_note(q.trim()))}</span><small>${esc(t.add_note_hint)}</small></button>` : ""}${c.allow_create_recipe && c.url ? `<a class="hit add" href="${esc(`${c.url}/g/${encodeURIComponent(c.mealie_group_slug || "home")}/r/create/new`)}" target="_blank" rel="noopener"><span>${svg(ICONS.open, 18)} ${esc(t.create_recipe)}</span><small></small></a>` : ""}`}</div>`;
+              }).join("") : `<div class="none">${esc(t.no_results)}</div>`}${c.allow_free_text ? `<button class="hit add" data-act="note"><span>${svg(ICONS.plus, 18)} ${esc(t.add_note(q.trim()))}</span><small>${esc(t.add_note_hint)}</small></button>` : ""}${c.allow_create_recipe && c.url ? `<a class="hit add" href="${esc(`${c.url}/g/${encodeURIComponent(c.mealie_group_slug || "home")}/r/create/new`)}" target="_blank" rel="noopener"><span>${svg(ICONS.open, 18)} ${esc(t.create_recipe)}</span><small></small></a>` : ""}</div>`;
             }
             secs += `<div class="search">${svg(ICONS.search, 18)}<input class="q" type="search" enterkeyhint="search" autocomplete="off" placeholder="${esc(t.search)}" value="${esc(q)}"></div>${ac}`;
           } else {

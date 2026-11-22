@@ -107,7 +107,8 @@ window.addEventListener('error',e=>document.title='JSERROR '+e.message);
      if(!same||!others) throw new Error('Reihenfolge instabil '+JSON.stringify({same,others}));
    }
    if(step==='noteopts'){
-     const inp=sr.querySelector('input.q'); inp.value='Pizza'; inp.dispatchEvent(new Event('input')); await wait(100);
+     const inp=sr.querySelector('input.q'); inp.value=P.get('q')||'Pizza'; inp.dispatchEvent(new Event('input')); await wait(100);
+     if(P.get('q')&&!sr.querySelector('.ac .hit[data-act=pick]')) throw new Error('keine Treffer');
      const got=(sr.querySelector('[data-act=note]')?'N':'')+(sr.querySelector('a.hit.add')?'L':'');
      if(got!==P.get('exp')) throw new Error('Optionen '+got+' statt '+P.get('exp'));
    }
