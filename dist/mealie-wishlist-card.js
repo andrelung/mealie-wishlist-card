@@ -7,7 +7,7 @@
  */
 (() => {
 "use strict";
-const MW_VERSION = "0.6.0";
+const MW_VERSION = "0.6.1";
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "side", "dessert", "snack", "drink"];
 const PICKER_SECTIONS = ["search", "pinned", "favorites_random", "most_cooked", "not_cooked_lately", "random"];
@@ -1032,24 +1032,25 @@ class MealieNextMealCard extends HTMLElement {
       const d = parseDate(nx.e.mealplan_date), today = new Date();
       const diff = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(today.getFullYear(), today.getMonth(), today.getDate())) / 86400000);
       const day = diff === 0 ? T.today : diff === 1 ? T.tomorrow : d.toLocaleDateString(this._lang, { weekday: "long" });
-      line = `${day}, ${M.meals[nx.e.entry_type] || nx.e.entry_type}: ${nx.e.recipe?.name || nx.e.title || ""}`;
+      line = `${day} · ${nx.e.recipe?.name || nx.e.title || ""}`;
+      this._title = `${day}, ${M.meals[nx.e.entry_type] || nx.e.entry_type}: ${nx.e.recipe?.name || nx.e.title || ""}`;
       if (c.show_image && c.url && nx.e.recipe?.recipe_id && nx.e.recipe.image) img = `${c.url}/api/media/recipes/${encodeURIComponent(nx.e.recipe.recipe_id)}/images/min-original.webp`;
     }
     const color = String(c.color || "orange");
     const cssColor = /^(#|rgb|var\()/.test(color) ? color : `var(--${color}-color, var(--state-icon-color, var(--primary-color)))`;
     this.shadowRoot.innerHTML = `<style>
       :host{display:block;height:100%}
-      ha-card{height:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px 12px;cursor:pointer;text-align:center;overflow:hidden}
+      ha-card{height:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px 10px;cursor:pointer;text-align:center;overflow:hidden}
       ha-card:focus-visible{outline:2px solid var(--primary-color)}
       .ic{color:${cssColor};display:flex;flex:0 1 auto;min-height:0}
-      .ic ha-icon{--mdc-icon-size:var(--mealie-next-meal-icon-size,56px)}
+      .ic ha-icon{--mdc-icon-size:var(--mealie-next-meal-icon-size,48px)}
       .img{width:64px;height:64px;border-radius:50%;object-fit:cover;flex:none}
-      .name{font-size:1rem;font-weight:500;color:var(--primary-text-color);line-height:1.2}
-      .next{font-size:.82rem;color:var(--secondary-text-color);line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-width:100%}
+      .name{font-size:var(--ha-font-size-l,16px);font-weight:var(--ha-font-weight-normal,400);color:var(--primary-text-color);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+      .next{font-size:var(--ha-font-size-s,12px);color:var(--secondary-text-color);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
     </style><ha-card tabindex="0" role="button">
       ${img ? `<img class="img" src="${esc(img)}" alt="" onerror="this.remove()">` : `<div class="ic"><ha-icon icon="${esc(c.icon)}"></ha-icon></div>`}
       <div class="name">${esc(c.name ?? T.name)}</div>
-      ${line ? `<div class="next">${esc(line)}</div>` : ""}
+      ${line ? `<div class="next" title="${esc(this._title || line)}">${esc(line)}</div>` : ""}
     </ha-card>`;
     const card = this.shadowRoot.querySelector("ha-card");
     const go = () => {

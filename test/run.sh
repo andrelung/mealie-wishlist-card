@@ -40,5 +40,5 @@ run mealie-an "step=openmealie&exp=true&cfg=%7B%22url%22%3A%22https%3A%2F%2Fm.ex
 run mealie-aus "step=openmealie&exp=false&cfg=%7B%22url%22%3A%22https%3A%2F%2Fm.example%22%2C%22allow_open_mealie%22%3Afalse%7D" 300
 run pinned "step=pinned&cfg=%7B%22picker_items%22%3A12%2C%22pinned_category_ids%22%3A%5B%22c1%22%5D%2C%22pinned_notes%22%3A%5B%22Vorr%C3%A4te%20leer%20kochen%22%2C%22Frische%20Sachen%20shoppen%22%5D%7D" 900
 run pinned-ansicht "step=pinned&shot=1&cfg=%7B%22picker_items%22%3A12%2C%22pinned_category_ids%22%3A%5B%22c1%22%5D%2C%22pinned_notes%22%3A%5B%22Vorr%C3%A4te%20leer%20kochen%22%2C%22Frische%20Sachen%20shoppen%22%5D%7D" 900
-run naechstes "step=nextmeal&exp=Abendessen%3A%20&nav=/mealie-wishlist&cfg=%7B%22meals%22%3A%5B%22dinner%22%5D%7D" 300 340
-run naechstes-alle "step=nextmeal&exp=%3A%20&cfg=%7B%7D" 300 340
+run naechstes "step=nextmeal&exp=Heute%20%C2%B7%20&nav=/mealie-wishlist&cfg=%7B%22meals%22%3A%5B%22dinner%22%5D%7D" 300 340
+run naechstes-alle "step=nextmeal&exp=%C2%B7&cfg=%7B%7D" 300 340
