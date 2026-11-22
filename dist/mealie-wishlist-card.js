@@ -7,7 +7,7 @@
  */
 (() => {
 "use strict";
-const MW_VERSION = "0.6.2";
+const MW_VERSION = "0.6.3";
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "side", "dessert", "snack", "drink"];
 const PICKER_SECTIONS = ["search", "pinned", "favorites_random", "most_cooked", "not_cooked_lately", "random"];
