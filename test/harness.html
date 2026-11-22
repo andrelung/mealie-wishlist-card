@@ -94,6 +94,15 @@ window.addEventListener('error',e=>document.title='JSERROR '+e.message);
  if(step!=='card'){
    click('.wish');
    await wait(200);
+   if(step==='focus'){
+     const inp=sr.querySelector('input.q');
+     if(sr.activeElement!==inp) throw new Error('kein Fokus');
+     inp.blur(); window.dispatchEvent(new KeyboardEvent('keydown',{key:'g',bubbles:true}));
+     window.dispatchEvent(new KeyboardEvent('keydown',{key:'n',bubbles:true})); await wait(50);
+     const inp2=sr.querySelector('input.q');
+     if(inp2.value!=='gn') throw new Error('Wert '+inp2.value);
+     if(!sr.querySelector('.ac .hit')) throw new Error('keine Treffer');
+   }
    if(step==='stable'){
      const order=()=>[...sr.querySelectorAll('.sec')].map(s=>[...s.querySelectorAll('.tile span')].map(x=>x.textContent).join('|'));
      const a=order();

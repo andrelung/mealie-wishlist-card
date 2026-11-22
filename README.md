@@ -1,3 +1,5 @@
+<p align="center"><img src="images/icon.png" width="128" alt="Mealie Wishlist icon"></p>
+
 # Mealie Wishlist Card
 
 A Home Assistant dashboard card for [Mealie](https://mealie.io). It shows your meal plan for the next days and puts a big **"Wish a meal"** button into every empty slot. Anyone in the household can tap it, pick a recipe and it lands in the Mealie meal plan – no sub-menus.
@@ -98,6 +100,7 @@ url: https://mealie.example.com        # for images and "Open in Mealie"
 | `history_days` | `180` | Days of meal plan history used for the statistics |
 | `favorites_min_rating` | `4` | A recipe counts as favourite from this rating |
 | `confirm_wish` | `false` | Ask before saving a wish |
+| `autofocus_search` | `true` | Focus the search field when the picker opens (type right away; opens the on-screen keyboard on tablets) |
 | `recipe_tap_action` | `details` | Tap on a planned recipe: `details`, `mealie`, `change`, `none` |
 | `allow_open_mealie` | `true` | Show *Open in Mealie* in the details (needs `url`) |
 | `allow_change` | `true` | Allow swapping a planned recipe |

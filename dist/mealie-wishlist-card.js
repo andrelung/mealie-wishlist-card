@@ -7,7 +7,7 @@
  */
 (() => {
 "use strict";
-const MW_VERSION = "0.6.3";
+const MW_VERSION = "0.7.0";
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "side", "dessert", "snack", "drink"];
 const PICKER_SECTIONS = ["search", "pinned", "favorites_random", "most_cooked", "not_cooked_lately", "random"];
@@ -150,6 +150,7 @@ const DEFAULTS = {
   allow_change: true,
   allow_remove: true,
   confirm_wish: false,
+  autofocus_search: true,
   tile_min_height: 64,
   allow_free_text: true,
   allow_create_recipe: true,
@@ -174,7 +175,7 @@ const EDITOR_I18N = {
       config_entry_id: "Mealie-Integration", show_header: "Kopfzeile anzeigen", title: "Titel", subtitle: "Untertitel", icon: "Symbol",
       days: "Anzahl Tage", meals: "Mahlzeiten (Spalten)", wish_label: "Text auf dem Wunsch-Knopf",
       picker: "Bereiche der Auswahl (Reihenfolge)", pinned_title: "Feste Optionen: Überschrift", pinned_category_ids: "Feste Optionen: Mealie-Kategorien", pinned_tag_ids: "Feste Optionen: Mealie-Tags", pinned_recipe_ids: "Feste Optionen: einzelne Rezepte", pinned_notes: "Feste Optionen: ohne Rezept", pinned_exclude_elsewhere: "Feste Optionen nicht in anderen Bereichen zeigen", picker_items: "Rezepte pro Bereich", history_days: "Zeitraum für Statistik (Tage)",
-      favorites_min_rating: "Lieblingsrezept ab Bewertung", confirm_wish: "Vor dem Eintragen nachfragen",
+      favorites_min_rating: "Lieblingsrezept ab Bewertung", confirm_wish: "Vor dem Eintragen nachfragen", autofocus_search: "Suchfeld sofort aktiv",
       allow_free_text: "Suche: „Name als Essen eintragen“ anbieten", allow_create_recipe: "Suche: „Rezept in Mealie anlegen“ anbieten",
       recipe_tap_action: "Tippen auf ein geplantes Rezept", allow_open_mealie: "„In Mealie öffnen“ erlauben", allow_change: "Tauschen erlauben", allow_remove: "Entfernen erlauben",
       show_images: "Rezeptbilder in den Kacheln", max_width: "Maximale Breite der ganzen Karte (optional)", tile_min_height: "Mindesthöhe jeder Kachel",
@@ -200,6 +201,7 @@ const EDITOR_I18N = {
       history_days: "So weit zurück wird der Speiseplan für „Meist gekocht“ und „Lange nicht gekocht“ ausgewertet.",
       favorites_min_rating: "Rezepte mit mindestens dieser Sternebewertung zählen automatisch als Lieblingsrezept.",
       confirm_wish: "An: Nach dem Antippen eines Rezepts kommt erst eine Rückfrage „… wünschen?“. Aus: Das Rezept wird sofort eingetragen.",
+      autofocus_search: "An: Beim Öffnen der Auswahl kann man sofort lostippen. Auf Tablets öffnet sich dabei die Bildschirmtastatur.",
       allow_free_text: "Unter den Suchtreffern: der eingetippte Name kann als Essen ohne Rezept (Notiz) in den Plan.",
       allow_create_recipe: "Unter den Suchtreffern: ein Link öffnet das Formular „Neues Rezept“ in Mealie. Braucht die Mealie-Adresse.",
       recipe_tap_action: "Was beim Antippen eines bereits geplanten Essens passiert.",
@@ -221,7 +223,7 @@ const EDITOR_I18N = {
       config_entry_id: "Mealie integration", show_header: "Show header", title: "Title", subtitle: "Subtitle", icon: "Icon",
       days: "Number of days", meals: "Meals (columns)", wish_label: "Wish button text",
       picker: "Picker sections (order)", pinned_title: "Pinned: heading", pinned_category_ids: "Pinned: Mealie categories", pinned_tag_ids: "Pinned: Mealie tags", pinned_recipe_ids: "Pinned: single recipes", pinned_notes: "Pinned: without recipe", pinned_exclude_elsewhere: "Hide pinned options from other sections", picker_items: "Recipes per section", history_days: "History for statistics (days)",
-      favorites_min_rating: "Favourite from rating", confirm_wish: "Ask before adding",
+      favorites_min_rating: "Favourite from rating", confirm_wish: "Ask before adding", autofocus_search: "Focus search field",
       allow_free_text: "Search: offer 'Add name as meal'", allow_create_recipe: "Search: offer 'Create recipe in Mealie'",
       recipe_tap_action: "Tap on a planned recipe", allow_open_mealie: "Allow open in Mealie", allow_change: "Allow swapping", allow_remove: "Allow removing",
       show_images: "Recipe images in tiles", max_width: "Maximum width of the whole card (optional)", tile_min_height: "Minimum height of each tile",
@@ -247,6 +249,7 @@ const EDITOR_I18N = {
       history_days: "How far back the meal plan is analysed for 'Most cooked' and 'Not cooked in a while'.",
       favorites_min_rating: "Recipes with at least this star rating automatically count as favourites.",
       confirm_wish: "On: tapping a recipe first asks 'Wish …?'. Off: the recipe is added right away.",
+      autofocus_search: "On: you can start typing right after opening the picker. On tablets this opens the on-screen keyboard.",
       allow_free_text: "Below the search results: the typed name can be added as a meal without recipe (note).",
       allow_create_recipe: "Below the search results: a link opens Mealie's 'New recipe' form. Needs the Mealie URL.",
       recipe_tap_action: "What happens when a planned meal is tapped.",
@@ -302,6 +305,7 @@ class MealieWishlistCard extends HTMLElement {
           { name: "history_days", selector: { number: { min: 14, max: 730, mode: "box" } } },
           { name: "favorites_min_rating", selector: { number: { min: 1, max: 5, step: 0.5, mode: "box" } } },
           { name: "confirm_wish", selector: { boolean: {} } },
+          { name: "autofocus_search", selector: { boolean: {} } },
           { name: "allow_free_text", selector: { boolean: {} } },
           { name: "allow_create_recipe", selector: { boolean: {} } },
         ] },
@@ -575,7 +579,7 @@ class MealieWishlistCard extends HTMLElement {
     if (dlg.type === "picker") {
       const head = `<div class="dtop"><div><b>${esc(c.wish_label ?? t.wish)}</b><small>${esc(dayTxt)} · ${esc(mealName)}</small></div><button class="x" data-act="close" aria-label="${esc(t.close)}">${svg(ICONS.close)}</button></div>`;
       let secs = "";
-      if (dlg.loading) secs = `<div class="msg">${esc(t.loading)}</div>`;
+      if (dlg.loading) secs = `${c.picker.includes("search") ? `<div class="search">${svg(ICONS.search, 18)}<input class="q" type="search" enterkeyhint="search" autocomplete="off" placeholder="${esc(t.search)}" value="${esc(dlg.q || "")}"></div>` : ""}<div class="msg">${esc(t.loading)}</div>`;
       else {
         const s = dlg.sections || (dlg.sections = this._sections());
         for (const p of c.picker) {
@@ -654,6 +658,22 @@ class MealieWishlistCard extends HTMLElement {
         this._act(el.dataset.act, el.dataset);
       });
     });
+    const dlgEl = root.querySelector(".dialog");
+    if (dlgEl && this._dialog?.type === "picker" && !this._keyBound) {
+      this._keyBound = (ev) => {
+        const inp = this.shadowRoot.querySelector("input.q");
+        if (!inp || !this._dialog || this._dialog.type !== "picker") return;
+        const path = ev.composedPath ? ev.composedPath() : [];
+        if (path.includes(inp)) return;
+        if (ev.key.length === 1 && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
+          ev.preventDefault();
+          inp.value += ev.key; inp.focus();
+          inp.dispatchEvent(new Event("input"));
+        } else if (ev.key === "Escape") { this._act("close", {}); }
+      };
+      window.addEventListener("keydown", this._keyBound, true);
+    }
+    if (!dlgEl && this._keyBound) { window.removeEventListener("keydown", this._keyBound, true); this._keyBound = null; }
     const q = root.querySelector("input.q");
     if (q) {
       q.addEventListener("input", () => {
@@ -705,10 +725,11 @@ class MealieWishlistCard extends HTMLElement {
   }
 
   async _openPicker(date, meal, replaceEntry = null) {
-    this._dialog = { type: "picker", date, meal, q: "", loading: !this._recipes, replace: replaceEntry };
+    const af = this._config.autofocus_search && this._config.picker.includes("search");
+    this._dialog = { type: "picker", date, meal, q: "", loading: !this._recipes, replace: replaceEntry, focusSearch: af };
     this._render();
     try { await this._ensurePickerData(); } catch (e) { this._dialog.error = `${this._t.error}: ${e?.message || e}`; }
-    if (this._dialog) { this._dialog.loading = false; this._render(); }
+    if (this._dialog) { this._dialog.loading = false; if (af && !this._dialog.q) this._dialog.focusSearch = true; this._render(); }
   }
 
   async _act(act, ds) {
@@ -866,7 +887,7 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 const EDITOR_DEFAULTS = {
   show_header: true, icon: DEFAULTS.icon, days: DEFAULTS.days, meals: DEFAULTS.meals, picker: DEFAULTS.picker,
   picker_items: DEFAULTS.picker_items, pinned_exclude_elsewhere: true, history_days: DEFAULTS.history_days, favorites_min_rating: DEFAULTS.favorites_min_rating,
-  confirm_wish: false, tile_min_height: 64, allow_free_text: true, allow_create_recipe: true, recipe_tap_action: "details", allow_open_mealie: true, allow_change: true, allow_remove: true, show_images: true,
+  confirm_wish: false, autofocus_search: true, tile_min_height: 64, allow_free_text: true, allow_create_recipe: true, recipe_tap_action: "details", allow_open_mealie: true, allow_change: true, allow_remove: true, show_images: true,
 };
 
 class MealieWishlistCardEditor extends HTMLElement {

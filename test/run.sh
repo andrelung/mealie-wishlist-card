@@ -43,3 +43,4 @@ run pinned-ansicht "step=pinned&shot=1&cfg=%7B%22picker_items%22%3A12%2C%22pinne
 run naechstes "step=nextmeal&exp=Heute%20%C2%B7%20&nav=/mealie-wishlist&cfg=%7B%22meals%22%3A%5B%22dinner%22%5D%7D" 300 340
 run naechstes-alle "step=nextmeal&exp=%C2%B7&cfg=%7B%7D" 300 340
 run opt-mit-treffern "step=noteopts&q=gno&exp=NL&cfg=%7B%22url%22%3A%22https%3A%2F%2Fm.example%22%7D" 300
+run focus "step=focus" 300
