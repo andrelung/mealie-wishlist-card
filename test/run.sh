@@ -28,3 +28,6 @@ run schmal-3spalten "step=card&w=370" 900 420
 run details-zu "step=remove" 760
 run stable "step=stable" 900
 run doremove "step=doremove" 760
+run note "step=note" 760
+run note-ansicht "step=note&shot=1" 640
+run minh "step=minh&cfg=%7B%22tile_min_height%22%3A120%7D" 900

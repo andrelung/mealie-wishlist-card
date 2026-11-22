@@ -37,7 +37,7 @@ const hass={language:'de',locale:{language:'de'},entities:{'sensor.mealie_rezept
   if(service==='get_mealplan'){const all=[...plan,...history];return {context:{},response:{mealplan:all.filter(e=>e.mealplan_date>=data.start_date&&e.mealplan_date<=data.end_date)}}}
   if(service==='get_recipes'){let it=recipes;if(data.search_terms)it=it.filter(r=>r.name.toLowerCase().includes(data.search_terms.toLowerCase()));return {context:{},response:{recipes:{items:it.slice(0,data.result_limit||10)}}}}
   if(service==='get_recipe'){const r=recipes.find(x=>x.slug===data.recipe_id||x.recipe_id===data.recipe_id);return {context:{},response:{recipe:{...r,ingredients:[{display:'500 g Gnocchi'},{display:'250 g Blattspinat'},{display:'80 ml Hafersahne'}],instructions:[]}}}}
-  if(service==='set_mealplan'){const e={mealplan_id:nextId++,entry_type:data.entry_type,mealplan_date:data.date,recipe:recipes.find(r=>r.recipe_id===data.recipe_id)};plan.push(e);return {context:{},response:{mealplan:e}}}
+  if(service==='set_mealplan'){const e={mealplan_id:nextId++,entry_type:data.entry_type,mealplan_date:data.date,title:data.note_title||null,recipe:recipes.find(r=>r.recipe_id===data.recipe_id)||null};plan.push(e);return {context:{},response:{mealplan:e}}}
   if(service==='update_mealplan'){const e=plan.find(x=>String(x.mealplan_id)===data.mealplan_id);e.recipe=recipes.find(r=>r.recipe_id===data.recipe_id);return {context:{},response:{mealplan:e}}}
   if(['delete_mealplan','set_mealplan','update_mealplan'].includes(service)&&ret&&service==='delete_mealplan') throw new Error("Validation error: An action which does not return responses can't be called with return_response=True");
   if(service==='delete_mealplan'){plan=plan.filter(x=>String(x.mealplan_id)!==data.mealplan_id);return {context:{},response:null}}
@@ -70,6 +70,7 @@ window.addEventListener('error',e=>document.title='JSERROR '+e.message);
    document.title=(ok?'OK ':'TESTERROR ')+JSON.stringify({sh:f.data.show_header,img:f.data.show_images,got:got&&got.show_header});
    return;
  }
+ if(step==='minh'){ const h=getComputedStyle(sr.querySelector('.wish')).minHeight; if(h!=='120px') throw new Error('minHeight '+h); }
  if(step!=='card'){
    click('.wish');
    await wait(200);
@@ -84,6 +85,14 @@ window.addEventListener('error',e=>document.title='JSERROR '+e.message);
      let others=true;
      for(let i=0;i<5;i++){ sr.querySelector('.mix[data-sec=random]').click(); await wait(20); const c=order(); if(c[0]!==a[0]||c[1]!==a[1]||c[2]!==a[2]) others=false; }
      if(!same||!others) throw new Error('Reihenfolge instabil '+JSON.stringify({same,others}));
+   }
+   if(step==='note'){
+     const inp=sr.querySelector('input.q'); inp.value='Pizza Margherita'; inp.dispatchEvent(new Event('input')); await wait(100);
+     if(P.get('shot')) { document.title='OK shot'; return; }
+     click('[data-act=note]'); await wait(200);
+     if(!plan.some(e=>e.title==='Pizza Margherita'&&!e.recipe)) throw new Error('Notiz fehlt');
+     if(!sr.querySelector('.toast')) throw new Error('keine Meldung');
+     if(![...sr.querySelectorAll('.meal span')].some(s=>s.textContent==='Pizza Margherita')) throw new Error('nicht auf Karte');
    }
    if(step==='search'||step==='confirm'||step==='commit'){
      const inp=sr.querySelector('input.q'); inp.value='gno'; inp.dispatchEvent(new Event('input')); await wait(100);

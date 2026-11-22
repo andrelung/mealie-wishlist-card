@@ -17,6 +17,7 @@ A Home Assistant dashboard card for [Mealie](https://mealie.io). It shows your m
   - most cooked (counted from your meal plan history)
   - not cooked in a while (meal plan history and Mealie's "last made")
   - random recipes
+- Search without a result: add the typed name as a meal (meal plan note without recipe) or jump to *Create recipe* in Mealie
 - Tap a recipe and it is wished – an optional confirmation can be switched on
 - Tap on a planned recipe: details (image, description; times, servings and ingredients behind a *Details* toggle) with *Open in Mealie*, *Swap meal* and *Remove from plan* – each action can be disabled, or the tap can open Mealie / the picker directly / do nothing
 - Header (title, subtitle, icon) freely configurable, each part can be hidden
@@ -85,6 +86,8 @@ url: https://mealie.example.com        # for images and "Open in Mealie"
 | `mealie_group_slug` | `home` | Group part of recipe links |
 | `language` | HA language | `de` or `en` |
 | `max_width` | – | Optional maximum width, e.g. `900px` (the card is centred) |
+| `tile_min_height` | `64` | Minimum height of the recipe tiles / wish buttons in px |
+| `allow_free_text` | `true` | Search without result: offer to add the typed name as a meal |
 
 Theme variables: `--mealie-wishlist-accent` (defaults to `--primary-color`), `--mealie-wishlist-max-width` (defaults to a width that fits the number of meal columns; the card is centred). In a narrow column the meals wrap below each day with a small label.
 
@@ -94,6 +97,7 @@ Theme variables: `--mealie-wishlist-accent` (defaults to `--primary-color`), `--
 
 - "Most cooked" counts **planned** meals – Mealie does not know what was actually cooked.
 - Home Assistant's `mealie.get_recipes` returns at most 100 recipes; with more recipes the search additionally asks Mealie, the other sections use the first 100.
+- The Home Assistant integration cannot create recipes. "Add as a meal" therefore creates a meal plan *note* with that name; the *Create recipe* link opens Mealie's own form (needs `url`).
 - Favourites are based on the recipe rating, because the Home Assistant integration does not expose Mealie's per-user favourites.
 
 ## License

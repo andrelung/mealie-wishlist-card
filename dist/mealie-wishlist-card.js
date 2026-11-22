@@ -7,7 +7,7 @@
  */
 (() => {
 "use strict";
-const MW_VERSION = "0.2.2";
+const MW_VERSION = "0.3.0";
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "side", "dessert", "snack", "drink"];
 const PICKER_SECTIONS = ["search", "favorites_random", "most_cooked", "not_cooked_lately", "random"];
@@ -45,6 +45,9 @@ const I18N = {
     cook: "Kochen",
     total: "Gesamt",
     no_results: "Nichts gefunden",
+    add_note: (q) => `„${q}“ als Essen eintragen`,
+    add_note_hint: "ohne Rezept, nur mit Namen",
+    create_recipe: "Neues Rezept in Mealie anlegen",
     no_entry: "Bitte im Karteneditor eine Mealie-Integration auswählen.",
     error: "Fehler beim Laden aus Mealie",
     action_error: "Das hat nicht geklappt",
@@ -86,6 +89,9 @@ const I18N = {
     cook: "Cook",
     total: "Total",
     no_results: "No results",
+    add_note: (q) => `Add "${q}" as a meal`,
+    add_note_hint: "without a recipe, name only",
+    create_recipe: "Create a new recipe in Mealie",
     no_entry: "Please select a Mealie integration in the card editor.",
     error: "Error loading from Mealie",
     action_error: "That did not work",
@@ -130,6 +136,8 @@ const DEFAULTS = {
   allow_change: true,
   allow_remove: true,
   confirm_wish: false,
+  tile_min_height: 64,
+  allow_free_text: true,
   language: undefined,
 };
 
@@ -173,6 +181,7 @@ class MealieWishlistCard extends HTMLElement {
           { name: "history_days", selector: { number: { min: 14, max: 730, mode: "box" } } },
           { name: "favorites_min_rating", selector: { number: { min: 1, max: 5, step: 0.5, mode: "box" } } },
           { name: "confirm_wish", selector: { boolean: {} } },
+          { name: "allow_free_text", selector: { boolean: {} } },
         ] },
         { type: "expandable", name: "", title: "Planned recipes", flatten: true, schema: [
           { name: "recipe_tap_action", selector: { select: { mode: "dropdown", options: [
@@ -183,6 +192,7 @@ class MealieWishlistCard extends HTMLElement {
         ] },
         { name: "show_images", selector: { boolean: {} } },
         { name: "max_width", selector: { text: {} } },
+        { name: "tile_min_height", selector: { number: { min: 40, max: 400, step: 4, mode: "box", unit_of_measurement: "px" } } },
         { name: "url", selector: { text: { type: "url" } } },
         { name: "language", selector: { select: { mode: "dropdown", options: [{ value: "de", label: "Deutsch" }, { value: "en", label: "English" }] } } },
       ],
@@ -191,7 +201,7 @@ class MealieWishlistCard extends HTMLElement {
         days: "Number of days", meals: "Meals (columns)", wish_label: "Wish button text", picker: "Picker sections (order)",
         picker_items: "Recipes per section", history_days: "History for statistics (days)", favorites_min_rating: "Favourite = rating at least",
         confirm_wish: "Ask before wishing", recipe_tap_action: "Tap on planned recipe", allow_change: "Allow swapping",
-        allow_remove: "Allow removing", show_images: "Show images", max_width: "Max. width (e.g. 900px, optional)", url: "Mealie URL (images, links)", language: "Language",
+        allow_remove: "Allow removing", show_images: "Show images", max_width: "Max. width (e.g. 900px, optional)", tile_min_height: "Min. height of recipe tiles", allow_free_text: "Search without result: allow adding the name as meal", url: "Mealie URL (images, links)", language: "Language",
       }[s.name]),
     };
   }
@@ -405,7 +415,7 @@ class MealieWishlistCard extends HTMLElement {
       : "";
     const oldBody = this.shadowRoot.querySelector(".dbody");
     const keepScroll = oldBody ? oldBody.scrollTop : 0;
-    this.shadowRoot.innerHTML = `<style>${STYLE}</style><ha-card style="--cols:${cols}${c.max_width ? `;--mealie-wishlist-max-width:${esc(c.max_width)}` : ""}">${header}${body}</ha-card>${this._dialogHtml()}${this._toast ? `<div class="toast" role="status">${svg(ICONS.check, 22)}<span>${esc(this._toast)}</span></div>` : ""}`;
+    this.shadowRoot.innerHTML = `<style>${STYLE}</style><ha-card style="--cols:${cols};--mw-tile-min-h:${Math.max(40, parseInt(c.tile_min_height, 10) || 64)}px${c.max_width ? `;--mealie-wishlist-max-width:${esc(c.max_width)}` : ""}">${header}${body}</ha-card>${this._dialogHtml()}${this._toast ? `<div class="toast" role="status">${svg(ICONS.check, 22)}<span>${esc(this._toast)}</span></div>` : ""}`;
     this._applyWidth();
     const newBody = this.shadowRoot.querySelector(".dbody");
     if (newBody && keepScroll) newBody.scrollTop = keepScroll;
@@ -444,7 +454,7 @@ class MealieWishlistCard extends HTMLElement {
                 const k = counts.get(r.recipe_id), l = last.get(r.recipe_id);
                 const sub = k ? t.times(k) : l ? t.ago(this._daysAgo(l)) : "";
                 return `<button class="hit" data-act="pick" data-rid="${esc(r.recipe_id)}"><span>${hl}</span><small>${esc(sub)}</small></button>`;
-              }).join("") : `<div class="none">${esc(t.no_results)}</div>`}</div>`;
+              }).join("") : `<div class="none">${esc(t.no_results)}</div>${c.allow_free_text ? `<button class="hit add" data-act="note"><span>${svg(ICONS.plus, 18)} ${esc(t.add_note(q.trim()))}</span><small>${esc(t.add_note_hint)}</small></button>` : ""}${c.url ? `<a class="hit add" href="${esc(`${c.url}/g/${encodeURIComponent(c.mealie_group_slug || "home")}/r/create/new`)}" target="_blank" rel="noopener"><span>${svg(ICONS.open, 18)} ${esc(t.create_recipe)}</span><small></small></a>` : ""}`}</div>`;
             }
             secs += `<div class="search">${svg(ICONS.search, 18)}<input class="q" type="search" enterkeyhint="search" autocomplete="off" placeholder="${esc(t.search)}" value="${esc(q)}"></div>${ac}`;
           } else {
@@ -570,6 +580,19 @@ class MealieWishlistCard extends HTMLElement {
       }
       case "close": case "backdrop": this._dialog = null; return this._render();
       case "shuffle": { const d = this._dialog; if (d?.sections && ds.sec) d.sections = { ...d.sections, [ds.sec]: this._sections()[ds.sec] }; return this._render(); }
+      case "note": {
+        const d = this._dialog, name = (d?.q || "").trim();
+        if (!d || !name || d.saving || !c.allow_free_text) return;
+        d.saving = true;
+        try {
+          if (d.replace) await this._call("update_mealplan", { mealplan_id: String(d.replace.mealplan_id), date: d.date, entry_type: d.meal, note_title: name });
+          else await this._call("set_mealplan", { date: d.date, entry_type: d.meal, note_title: name });
+          this._dialog = null;
+          this._showToast(d.replace ? t.swapped : t.saved);
+          this._refresh();
+        } catch (e) { d.saving = false; d.error = `${t.action_error}: ${e?.message || e}`; this._render(); }
+        return;
+      }
       case "pick": {
         const r = this._findRecipe(ds.rid);
         if (!r) return;
@@ -628,10 +651,10 @@ ha-card{display:block;padding:16px 16px 8px;overflow:hidden;max-width:var(--meal
 .day b{font-size:.98rem}.day small{color:var(--secondary-text-color);font-size:.78rem}
 .cell{display:flex;flex-direction:column;gap:6px;min-width:0}
 button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:pointer;text-align:left}
-.meal{display:flex;flex-direction:column;border-radius:12px;background:var(--secondary-background-color,#f1f2f4);overflow:hidden;min-height:64px;flex:1;color:var(--primary-text-color)}
+.meal{display:flex;flex-direction:column;border-radius:12px;background:var(--secondary-background-color,#f1f2f4);overflow:hidden;min-height:var(--mw-tile-min-h,64px);flex:1;color:var(--primary-text-color)}
 .meal img{width:100%;height:56px;object-fit:cover;display:block}
 .meal span{padding:8px 10px;font-size:.88rem;line-height:1.25;overflow-wrap:anywhere}
-.wish{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:64px;border-radius:12px;border:2px dashed var(--mw-accent);background:color-mix(in srgb,var(--mw-accent) 9%,transparent);color:var(--mw-accent);font-weight:600;font-size:.9rem;text-align:center;padding:6px}
+.wish{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:var(--mw-tile-min-h,64px);border-radius:12px;border:2px dashed var(--mw-accent);background:color-mix(in srgb,var(--mw-accent) 9%,transparent);color:var(--mw-accent);font-weight:600;font-size:.9rem;text-align:center;padding:6px}
 .wish:hover,.meal:hover,.tile:hover,.hit:hover{filter:brightness(.97)}
 .wish:focus-visible,.meal:focus-visible,.tile:focus-visible{outline:3px solid color-mix(in srgb,var(--mw-accent) 45%,transparent)}
 .lbl{display:none;font-size:.72rem;font-weight:500;color:var(--secondary-text-color);margin-bottom:2px}
@@ -653,7 +676,9 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 .ac{border:1px solid var(--divider-color,#e4e6ea);border-radius:12px;margin-top:6px;overflow:hidden}
 .hit{display:flex;justify-content:space-between;gap:8px;width:100%;padding:10px 14px;font-size:.92rem}
 .hit+.hit{border-top:1px solid var(--divider-color,#e4e6ea)}
-.hit em{font-style:normal;font-weight:700;color:var(--mw-accent)}.hit small{color:var(--secondary-text-color);white-space:nowrap}
+.hit em{font-style:normal;font-weight:700;color:var(--mw-accent)}
+.hit.add{border-top:1px solid var(--divider-color,#e4e6ea);color:var(--mw-accent);font-weight:500;text-decoration:none;align-items:center}
+.hit.add span{display:inline-flex;align-items:center;gap:6px}.hit small{color:var(--secondary-text-color);white-space:nowrap}
 .none{padding:10px 14px;color:var(--secondary-text-color);font-size:.9rem}
 .sec{margin-top:16px}
 .sec h3,.dbody h3{font-size:.92rem;margin:0 0 8px;display:flex;align-items:center;gap:6px}
@@ -687,7 +712,7 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 const EDITOR_DEFAULTS = {
   show_header: true, icon: DEFAULTS.icon, days: DEFAULTS.days, meals: DEFAULTS.meals, picker: DEFAULTS.picker,
   picker_items: DEFAULTS.picker_items, history_days: DEFAULTS.history_days, favorites_min_rating: DEFAULTS.favorites_min_rating,
-  confirm_wish: false, recipe_tap_action: "details", allow_change: true, allow_remove: true, show_images: true,
+  confirm_wish: false, tile_min_height: 64, allow_free_text: true, recipe_tap_action: "details", allow_change: true, allow_remove: true, show_images: true,
 };
 
 class MealieWishlistCardEditor extends HTMLElement {
