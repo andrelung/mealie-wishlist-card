@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><title>Mealie Wishlist – Test</title>
+<style>
+body{margin:0;padding:24px;background:#111318;font-family:Roboto,Helvetica,Arial,sans-serif;
+--primary-color:#e58325;--card-background-color:#1c1d22;--primary-text-color:#e6e6e6;--secondary-text-color:#9aa0a6;
+--secondary-background-color:#2a2c33;--divider-color:#30323a;--text-primary-color:#fff}
+body.light{background:#f2f3f5;--card-background-color:#fff;--primary-text-color:#1c1c1e;--secondary-text-color:#6b6f76;--secondary-background-color:#f1f2f4;--divider-color:#e4e6ea}
+ha-card{display:block;background:var(--card-background-color);border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+#wrap{width:var(--w,640px)}
+</style></head><body>
+<div id="wrap"></div>
+<script>
+// ha-icon Ersatz
+customElements.define('ha-icon', class extends HTMLElement{connectedCallback(){this.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M11,9H9V2H7V9H5V2H3V9C3,11.12 4.66,12.84 6.75,12.97V22H9.25V12.97C11.34,12.84 13,11.12 13,9V2H11V9M16,6V14H18.5V22H21V2C18.24,2 16,4.24 16,6Z"/></svg>'}});
+const P = new URLSearchParams(location.search);
+if (P.get('theme')==='light') document.body.classList.add('light');
+if (P.get('w')) document.getElementById('wrap').style.setProperty('--w', P.get('w')+'px');
+const pad=n=>String(n).padStart(2,'0'); const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const day=n=>{const d=new Date();d.setDate(d.getDate()+n);return iso(d)};
+const R=(id,name,extra={})=>({recipe_id:id,user_id:'u',group_id:'g',name,slug:name.toLowerCase().replace(/[^a-z0-9]+/g,'-'),description:'',categories:[],tags:[],tools:[],image:null,rating:null,last_made:null,recipe_servings:2,prep_time:'15 min',perform_time:'25 min',total_time:'40 min',...extra});
+const recipes=[R('r1','Gnocchi mit Spinat',{rating:5}),R('r2','Erdnuss-Tofu-Bowl',{rating:4.5}),R('r3','Waffeln',{rating:4}),R('r4','Linsen-Dal',{last_made:day(-20)+'T18:00:00'}),R('r5','Shakshuka'),R('r6','Rotkohl-Salat'),R('r7','Chili sin Carne',{rating:3}),R('r8','Ofengemüse',{last_made:day(-150)+'T18:00:00'}),R('r9','Kürbis-Gnocchi'),R('r10','Pasta Verde',{rating:4})];
+let nextId=100;
+let plan=[
+ {mealplan_id:1,entry_type:'dinner',mealplan_date:day(0),title:null,description:null,recipe:recipes[0]},
+ {mealplan_id:2,entry_type:'breakfast',mealplan_date:day(0),title:null,description:null,recipe:recipes[2]},
+ {mealplan_id:3,entry_type:'dinner',mealplan_date:day(1),title:null,description:null,recipe:recipes[1]},
+ {mealplan_id:4,entry_type:'lunch',mealplan_date:day(2),title:'Reste',description:'vom Vortag',recipe:null},
+];
+const history=[];
+[['r2',-3],['r2',-10],['r2',-17],['r1',-5],['r1',-30],['r4',-20],['r5',-12],['r2',-40],['r6',-60]].forEach(([id,d],i)=>history.push({mealplan_id:500+i,entry_type:'dinner',mealplan_date:day(d),recipe:recipes.find(r=>r.recipe_id===id)}));
+window.CALLS=[];
+const hass={language:'de',locale:{language:'de'},entities:{'sensor.mealie_rezepte_rezepte':{platform:'mealie',config_entry_id:'E1'}},
+ async callService(domain,service,data,target,notify,ret){
+  CALLS.push({service,data});
+  await new Promise(r=>setTimeout(r,20));
+  if(P.get('fail')==='1') throw new Error('Verbindung fehlgeschlagen');
+  if(service==='get_mealplan'){const all=[...plan,...history];return {context:{},response:{mealplan:all.filter(e=>e.mealplan_date>=data.start_date&&e.mealplan_date<=data.end_date)}}}
+  if(service==='get_recipes'){let it=recipes;if(data.search_terms)it=it.filter(r=>r.name.toLowerCase().includes(data.search_terms.toLowerCase()));return {context:{},response:{recipes:{items:it.slice(0,data.result_limit||10)}}}}
+  if(service==='get_recipe'){const r=recipes.find(x=>x.slug===data.recipe_id||x.recipe_id===data.recipe_id);return {context:{},response:{recipe:{...r,ingredients:[{display:'500 g Gnocchi'},{display:'250 g Blattspinat'},{display:'80 ml Hafersahne'}],instructions:[]}}}}
+  if(service==='set_mealplan'){const e={mealplan_id:nextId++,entry_type:data.entry_type,mealplan_date:data.date,recipe:recipes.find(r=>r.recipe_id===data.recipe_id)};plan.push(e);return {context:{},response:{mealplan:e}}}
+  if(service==='update_mealplan'){const e=plan.find(x=>String(x.mealplan_id)===data.mealplan_id);e.recipe=recipes.find(r=>r.recipe_id===data.recipe_id);return {context:{},response:{mealplan:e}}}
+  if(service==='delete_mealplan'){plan=plan.filter(x=>String(x.mealplan_id)!==data.mealplan_id);return {context:{},response:null}}
+  throw new Error('unbekannt '+service);
+ }};
+window.addEventListener('error',e=>document.title='JSERROR '+e.message);
+</script>
+<script src="../dist/mealie-wishlist-card.js"></script>
+<script>
+(async()=>{
+ const cfg=JSON.parse(P.get('cfg')||'{}');
+ const card=document.createElement('mealie-wishlist-card');
+ card.setConfig({config_entry_id:'E1',days:4,meals:['breakfast','lunch','dinner'],...cfg});
+ document.getElementById('wrap').appendChild(card);
+ card.hass=hass;
+ const sr=card.shadowRoot; const wait=ms=>new Promise(r=>setTimeout(r,ms));
+ const click=sel=>{const el=sr.querySelector(sel); if(!el) throw new Error('nicht gefunden: '+sel); el.click();};
+ await wait(150);
+ const step=P.get('step')||'card';
+ try{
+ if(step!=='card'){
+   click('.wish');
+   await wait(200);
+   if(step==='search'||step==='confirm'||step==='commit'){
+     const inp=sr.querySelector('input.q'); inp.value='gno'; inp.dispatchEvent(new Event('input')); await wait(100);
+   }
+   if(step==='confirm'||step==='commit'){ click('.ac .hit'); await wait(50); }
+   if(step==='commit'){ click('[data-act=commit]'); await wait(1300); }
+   if(step==='details'||step==='remove'||step==='change'){ click('[data-act=close]'); await wait(30); click('.meal'); await wait(200); }
+   if(step==='remove'){ click('[data-act=remove]'); await wait(50); }
+   if(step==='change'){ click('[data-act=change]'); await wait(200); click('.tile'); await wait(50); click('[data-act=commit]'); await wait(1300); }
+ }
+ document.title='OK '+JSON.stringify(CALLS.map(c=>c.service));
+ }catch(e){document.title='TESTERROR '+e.message}
+ window.RESULT={calls:CALLS,plan};
+})();
+</script>
+</body></html>

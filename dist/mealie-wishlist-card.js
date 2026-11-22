@@ -1,0 +1,649 @@
+/*!
+ * Mealie Wishlist Card
+ * Shows the Mealie meal plan for the next days and lets anyone wish a recipe
+ * for an empty slot with one tap. Uses only the official Home Assistant
+ * Mealie integration actions (no Mealie token in the dashboard).
+ * License: MIT
+ */
+(() => {
+"use strict";
+const MW_VERSION = "0.1.0";
+
+const MEAL_TYPES = ["breakfast", "lunch", "dinner", "side", "dessert", "snack", "drink"];
+const PICKER_SECTIONS = ["search", "favorites_random", "most_cooked", "not_cooked_lately", "random"];
+
+const I18N = {
+  de: {
+    title: "Mealie Wishlist",
+    subtitle: "Was möchtest du essen?",
+    wish: "Essen wünschen",
+    today: "Heute",
+    tomorrow: "Morgen",
+    meals: { breakfast: "Frühstück", lunch: "Mittagessen", dinner: "Abendessen", side: "Beilage", dessert: "Nachtisch", snack: "Snack", drink: "Getränk" },
+    search: "Rezept suchen …",
+    favorites_random: "Lieblingsrezepte",
+    most_cooked: "Meist gekocht",
+    not_cooked_lately: "Lange nicht gekocht",
+    random: "Zufällig",
+    shuffle: "neu mischen",
+    times: (n) => `${n}× gekocht`,
+    ago: (d) => (d < 1 ? "heute" : d === 1 ? "gestern" : d < 45 ? `vor ${d} Tagen` : `vor ${Math.round(d / 30)} Mon.`),
+    never: "noch nie gekocht",
+    confirm: (r, d, m) => `„${r}“ für ${d}, ${m} wünschen?`,
+    yes: "Wünschen",
+    cancel: "Abbrechen",
+    close: "Schließen",
+    saved: "Gewünscht!",
+    open_mealie: "In Mealie öffnen",
+    change: "Anderes Essen wünschen",
+    remove: "Aus Plan entfernen",
+    remove_confirm: (r) => `„${r}“ wirklich aus dem Plan entfernen?`,
+    ingredients: "Zutaten",
+    servings: "Portionen",
+    prep: "Vorbereitung",
+    cook: "Kochen",
+    total: "Gesamt",
+    no_results: "Nichts gefunden",
+    no_entry: "Bitte im Karteneditor eine Mealie-Integration auswählen.",
+    error: "Fehler beim Laden aus Mealie",
+    note: "Notiz",
+    loading: "Lädt …",
+    empty_section: "Noch keine Daten",
+  },
+  en: {
+    title: "Mealie Wishlist",
+    subtitle: "What would you like to eat?",
+    wish: "Wish a meal",
+    today: "Today",
+    tomorrow: "Tomorrow",
+    meals: { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", side: "Side", dessert: "Dessert", snack: "Snack", drink: "Drink" },
+    search: "Search recipes …",
+    favorites_random: "Favourites",
+    most_cooked: "Most cooked",
+    not_cooked_lately: "Not cooked in a while",
+    random: "Random",
+    shuffle: "shuffle",
+    times: (n) => `cooked ${n}×`,
+    ago: (d) => (d < 1 ? "today" : d === 1 ? "yesterday" : d < 45 ? `${d} days ago` : `${Math.round(d / 30)} mo. ago`),
+    never: "never cooked",
+    confirm: (r, d, m) => `Wish "${r}" for ${d}, ${m}?`,
+    yes: "Wish",
+    cancel: "Cancel",
+    close: "Close",
+    saved: "Wished!",
+    open_mealie: "Open in Mealie",
+    change: "Wish something else",
+    remove: "Remove from plan",
+    remove_confirm: (r) => `Really remove "${r}" from the plan?`,
+    ingredients: "Ingredients",
+    servings: "Servings",
+    prep: "Prep",
+    cook: "Cook",
+    total: "Total",
+    no_results: "No results",
+    no_entry: "Please select a Mealie integration in the card editor.",
+    error: "Error loading from Mealie",
+    note: "Note",
+    loading: "Loading …",
+    empty_section: "No data yet",
+  },
+};
+
+const ICONS = {
+  plus: "M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z",
+  close: "M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z",
+  search: "M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z",
+  favorites_random: "M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.42,3 7.5,3C9.24,3 10.91,3.81 12,4.95C13.09,3.81 14.76,3 16.5,3C19.58,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z",
+  most_cooked: "M17.66 11.2C17.43 10.9 17.15 10.64 16.89 10.38C16.22 9.78 15.46 9.35 14.82 8.72C13.33 7.26 13 4.85 13.95 3C13 3.23 12.17 3.75 11.46 4.32C8.87 6.4 7.85 10.07 9.07 13.22C9.11 13.32 9.15 13.42 9.15 13.55C9.15 13.77 9 13.97 8.8 14.05C8.57 14.15 8.33 14.09 8.14 13.93C8.08 13.88 8.04 13.83 8 13.76C6.87 12.33 6.69 10.28 7.45 8.64C5.78 10 4.87 12.3 5 14.47C5.06 14.97 5.12 15.47 5.29 15.97C5.43 16.57 5.7 17.17 6 17.7C7.08 19.43 8.95 20.67 10.96 20.92C13.1 21.19 15.39 20.8 17.03 19.32C18.86 17.66 19.5 15 18.56 12.72L18.43 12.46C18.22 12 17.66 11.2 17.66 11.2Z",
+  not_cooked_lately: "M6,2H18V8L14,12L18,16V22H6V16L10,12L6,8V2M16,16.5L12,12.5L8,16.5V20H16V16.5M12,11.5L16,7.5V4H8V7.5L12,11.5Z",
+  random: "M19,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M7.5,6A1.5,1.5 0 1,1 7.5,9A1.5,1.5 0 1,1 7.5,6M16.5,6A1.5,1.5 0 1,1 16.5,9A1.5,1.5 0 1,1 16.5,6M12,10.5A1.5,1.5 0 1,1 12,13.5A1.5,1.5 0 1,1 12,10.5M7.5,15A1.5,1.5 0 1,1 7.5,18A1.5,1.5 0 1,1 7.5,15M16.5,15A1.5,1.5 0 1,1 16.5,18A1.5,1.5 0 1,1 16.5,15Z",
+  fork: "M11,9H9V2H7V9H5V2H3V9C3,11.12 4.66,12.84 6.75,12.97V22H9.25V12.97C11.34,12.84 13,11.12 13,9V2H11V9M16,6V14H18.5V22H21V2C18.24,2 16,4.24 16,6Z",
+  open: "M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z",
+  swap: "M21,9L17,5V8H10V10H17V13M7,11L3,15L7,19V16H14V14H7V11Z",
+  delete: "M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z",
+};
+
+const DEFAULTS = {
+  title: undefined,
+  subtitle: undefined,
+  icon: "mdi:silverware-fork-knife",
+  show_header: true,
+  days: 3,
+  meals: ["dinner"],
+  wish_label: undefined,
+  picker: ["search", "favorites_random", "most_cooked", "not_cooked_lately", "random"],
+  picker_items: 4,
+  history_days: 180,
+  favorites_min_rating: 4,
+  show_images: true,
+  url: "",
+  recipe_tap_action: "details",
+  allow_change: true,
+  allow_remove: true,
+  confirm_wish: true,
+  language: undefined,
+};
+
+const esc = (s) =>
+  String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const svg = (path, size = 20) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path fill="currentColor" d="${path}"/></svg>`;
+const pad = (n) => String(n).padStart(2, "0");
+const isoDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const addDays = (d, n) => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() + n); return x; };
+const parseDate = (s) => { const [y, m, d] = String(s).slice(0, 10).split("-").map(Number); return new Date(y, m - 1, d); };
+const shuffle = (arr) => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const norm = (s) => String(s || "").toLocaleLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+class MealieWishlistCard extends HTMLElement {
+  static getStubConfig(hass) {
+    const entry = Object.values(hass?.entities || {}).find((e) => e.platform === "mealie");
+    return { config_entry_id: entry?.config_entry_id || "", days: 3, meals: ["dinner"] };
+  }
+
+  static getConfigForm() {
+    const sel = (opts) => ({ select: { multiple: true, mode: "list", reorder: true, options: opts } });
+    return {
+      schema: [
+        { name: "config_entry_id", required: true, selector: { config_entry: { integration: "mealie" } } },
+        { type: "expandable", name: "", title: "Header", flatten: true, schema: [
+          { name: "show_header", selector: { boolean: {} } },
+          { name: "title", selector: { text: {} } },
+          { name: "subtitle", selector: { text: {} } },
+          { name: "icon", selector: { icon: {} } },
+        ] },
+        { name: "days", selector: { number: { min: 1, max: 31, mode: "box" } } },
+        { name: "meals", selector: sel(MEAL_TYPES.map((m) => ({ value: m, label: I18N.en.meals[m] }))) },
+        { name: "wish_label", selector: { text: {} } },
+        { type: "expandable", name: "", title: "Recipe picker", flatten: true, schema: [
+          { name: "picker", selector: sel(PICKER_SECTIONS.map((p) => ({ value: p, label: p === "search" ? "Search" : I18N.en[p] }))) },
+          { name: "picker_items", selector: { number: { min: 1, max: 12, mode: "box" } } },
+          { name: "history_days", selector: { number: { min: 14, max: 730, mode: "box" } } },
+          { name: "favorites_min_rating", selector: { number: { min: 1, max: 5, step: 0.5, mode: "box" } } },
+          { name: "confirm_wish", selector: { boolean: {} } },
+        ] },
+        { type: "expandable", name: "", title: "Planned recipes", flatten: true, schema: [
+          { name: "recipe_tap_action", selector: { select: { mode: "dropdown", options: [
+            { value: "details", label: "Details" }, { value: "mealie", label: "Open in Mealie" },
+            { value: "change", label: "Wish something else" }, { value: "none", label: "Nothing" } ] } } },
+          { name: "allow_change", selector: { boolean: {} } },
+          { name: "allow_remove", selector: { boolean: {} } },
+        ] },
+        { name: "show_images", selector: { boolean: {} } },
+        { name: "url", selector: { text: { type: "url" } } },
+        { name: "language", selector: { select: { mode: "dropdown", options: [{ value: "de", label: "Deutsch" }, { value: "en", label: "English" }] } } },
+      ],
+      computeLabel: (s) => ({
+        config_entry_id: "Mealie integration", show_header: "Show header", title: "Title", subtitle: "Subtitle", icon: "Icon",
+        days: "Number of days", meals: "Meals (columns)", wish_label: "Wish button text", picker: "Picker sections (order)",
+        picker_items: "Recipes per section", history_days: "History for statistics (days)", favorites_min_rating: "Favourite = rating at least",
+        confirm_wish: "Ask before wishing", recipe_tap_action: "Tap on planned recipe", allow_change: "Allow changing",
+        allow_remove: "Allow removing", show_images: "Show images", url: "Mealie URL (images, links)", language: "Language",
+      }[s.name]),
+    };
+  }
+
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this._plan = [];
+    this._history = null;
+    this._recipes = null;
+    this._recipesTruncated = false;
+    this._loaded = false;
+    this._error = null;
+    this._dialog = null;
+    this._lastFetch = 0;
+    this._dayKey = "";
+  }
+
+  setConfig(config) {
+    if (!config) throw new Error("Invalid configuration");
+    const c = { ...DEFAULTS, ...config };
+    c.days = Math.max(1, Math.min(31, parseInt(c.days, 10) || 3));
+    c.meals = (Array.isArray(c.meals) && c.meals.length ? c.meals : DEFAULTS.meals).filter((m) => MEAL_TYPES.includes(m));
+    if (!c.meals.length) c.meals = ["dinner"];
+    c.picker = (Array.isArray(c.picker) ? c.picker : DEFAULTS.picker).filter((p) => PICKER_SECTIONS.includes(p));
+    c.picker_items = Math.max(1, Math.min(12, parseInt(c.picker_items, 10) || 4));
+    c.url = String(c.url || "").replace(/\/+$/, "");
+    const old = this._config;
+    this._config = c;
+    if (old && (old.config_entry_id !== c.config_entry_id || old.days !== c.days || old.history_days !== c.history_days)) {
+      this._history = null; this._recipes = null; this._lastFetch = 0;
+    }
+    this._render();
+    if (this._hass) this._refresh();
+  }
+
+  set hass(hass) {
+    const first = !this._hass;
+    this._hass = hass;
+    const key = isoDate(new Date());
+    if (first || key !== this._dayKey || Date.now() - this._lastFetch > 5 * 60 * 1000) this._refresh();
+  }
+
+  get hass() { return this._hass; }
+
+  getCardSize() { return 1 + this._config.days * 2; }
+
+  getGridOptions() { return { columns: 12, min_columns: 6, rows: "auto" }; }
+
+  connectedCallback() {
+    this._timer = setInterval(() => this._hass && this._refresh(), 5 * 60 * 1000);
+  }
+
+  disconnectedCallback() { clearInterval(this._timer); }
+
+  get _t() {
+    const lang = this._config?.language || (this._hass?.locale?.language || this._hass?.language || "en").slice(0, 2);
+    return I18N[lang] || I18N.en;
+  }
+
+  async _call(service, data = {}) {
+    const res = await this._hass.callService("mealie", service, { config_entry_id: this._config.config_entry_id, ...data }, undefined, false, true);
+    return res?.response ?? res;
+  }
+
+  async _refresh() {
+    if (!this._hass || !this._config) return;
+    if (!this._config.config_entry_id) { this._render(); return; }
+    if (this._busy) return;
+    this._busy = true;
+    this._lastFetch = Date.now();
+    const today = new Date();
+    this._dayKey = isoDate(today);
+    try {
+      const r = await this._call("get_mealplan", { start_date: isoDate(today), end_date: isoDate(addDays(today, this._config.days - 1)) });
+      this._plan = r?.mealplan || [];
+      this._error = null;
+    } catch (e) {
+      this._error = e?.message || String(e);
+    }
+    this._loaded = true;
+    this._busy = false;
+    this._render();
+  }
+
+  async _ensurePickerData(force = false) {
+    const c = this._config;
+    const today = new Date();
+    const jobs = [];
+    if (!this._recipes || force) {
+      jobs.push(this._call("get_recipes", { result_limit: 100 }).then((r) => {
+        this._recipes = r?.recipes?.items || [];
+        this._recipesTruncated = this._recipes.length >= 100;
+      }));
+    }
+    const needHistory = c.picker.includes("most_cooked") || c.picker.includes("not_cooked_lately");
+    if (needHistory && (!this._history || force)) {
+      jobs.push(this._call("get_mealplan", { start_date: isoDate(addDays(today, -c.history_days)), end_date: isoDate(addDays(today, -1)) })
+        .then((r) => { this._history = r?.mealplan || []; })
+        .catch(() => { this._history = []; }));
+    }
+    await Promise.all(jobs);
+  }
+
+  _stats() {
+    const counts = new Map();
+    const last = new Map();
+    for (const e of this._history || []) {
+      const id = e.recipe?.recipe_id;
+      if (!id) continue;
+      counts.set(id, (counts.get(id) || 0) + 1);
+      const d = String(e.mealplan_date).slice(0, 10);
+      if (!last.has(id) || last.get(id) < d) last.set(id, d);
+    }
+    for (const r of this._recipes || []) {
+      if (r.last_made) {
+        const d = String(r.last_made).slice(0, 10);
+        if (!last.has(r.recipe_id) || last.get(r.recipe_id) < d) last.set(r.recipe_id, d);
+      }
+    }
+    return { counts, last };
+  }
+
+  _daysAgo(iso) {
+    if (!iso) return null;
+    const t = new Date();
+    return Math.round((new Date(t.getFullYear(), t.getMonth(), t.getDate()) - parseDate(iso)) / 86400000);
+  }
+
+  _sections() {
+    const c = this._config, n = c.picker_items, all = this._recipes || [];
+    const { counts, last } = this._stats();
+    const t = this._t;
+    const byId = new Map(all.map((r) => [r.recipe_id, r]));
+    const out = {};
+    out.favorites_random = shuffle(all.filter((r) => (r.rating || 0) >= c.favorites_min_rating)).slice(0, n)
+      .map((r) => ({ r, sub: "★ " + Number(r.rating).toLocaleString(this._config.language || this._hass?.locale?.language || "en") }));
+    out.most_cooked = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([id, k]) => ({ r: byId.get(id), k })).filter((x) => x.r).slice(0, n)
+      .map((x) => ({ r: x.r, sub: t.times(x.k) }));
+    out.not_cooked_lately = all.map((r) => ({ r, d: last.get(r.recipe_id) || "" })).sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0)).slice(0, n)
+      .map((x) => ({ r: x.r, sub: x.d ? t.ago(this._daysAgo(x.d)) : t.never }));
+    out.random = shuffle(all).slice(0, n).map((r) => ({ r, sub: "" }));
+    return out;
+  }
+
+  _img(recipe) {
+    if (!this._config.show_images || !this._config.url || !recipe?.recipe_id || !recipe.image) return "";
+    return `${this._config.url}/api/media/recipes/${encodeURIComponent(recipe.recipe_id)}/images/min-original.webp`;
+  }
+
+  _dayLabel(i, d) {
+    const t = this._t, lang = this._config.language || this._hass?.locale?.language || "en";
+    const long = d.toLocaleDateString(lang, { weekday: "long" });
+    const short = d.toLocaleDateString(lang, { weekday: "short", day: "2-digit", month: "2-digit" });
+    if (i === 0) return [t.today, short];
+    if (i === 1) return [t.tomorrow, short];
+    return [long, d.toLocaleDateString(lang, { day: "2-digit", month: "2-digit" })];
+  }
+
+  _recipeUrl(recipe) {
+    if (!this._config.url || !recipe?.slug) return "";
+    return `${this._config.url}/g/${encodeURIComponent(this._config.mealie_group_slug || "home")}/r/${encodeURIComponent(recipe.slug)}`;
+  }
+
+  _render() {
+    if (!this._config) return;
+    const c = this._config, t = this._t;
+    const title = c.title ?? t.title, subtitle = c.subtitle ?? t.subtitle, wish = c.wish_label ?? t.wish;
+    const cols = c.meals.length;
+    let body = "";
+    if (!c.config_entry_id) body = `<div class="msg">${esc(t.no_entry)}</div>`;
+    else if (this._error) body = `<div class="msg err">${esc(t.error)}: ${esc(this._error)}</div>`;
+    else if (!this._loaded) body = `<div class="msg">${esc(t.loading)}</div>`;
+    else {
+      const today = new Date();
+      let rows = "";
+      if (cols > 1) rows += `<div class="row head"><div></div>${c.meals.map((m) => `<div>${esc(t.meals[m])}</div>`).join("")}</div>`;
+      for (let i = 0; i < c.days; i++) {
+        const d = addDays(today, i), key = isoDate(d);
+        const [a, b] = this._dayLabel(i, d);
+        rows += `<div class="row"><div class="day"><b>${esc(a)}</b><small>${esc(b)}</small></div>`;
+        for (const m of c.meals) {
+          const entries = this._plan.filter((e) => String(e.mealplan_date).slice(0, 10) === key && e.entry_type === m);
+          const label = cols === 1 ? "" : `<span class="sr">${esc(t.meals[m])}</span>`;
+          if (!entries.length) {
+            rows += `<button class="wish" data-act="wish" data-date="${key}" data-meal="${m}">${label}${svg(ICONS.plus, 22)}<span>${esc(wish)}</span></button>`;
+          } else {
+            rows += `<div class="cell">${entries.map((e) => {
+              const r = e.recipe, img = this._img(r);
+              const name = r?.name || e.title || t.note;
+              return `<button class="meal${img ? " has-img" : ""}" data-act="planned" data-id="${e.mealplan_id}">${img ? `<img src="${esc(img)}" alt="" loading="lazy" onerror="this.remove()">` : ""}<span>${esc(name)}</span></button>`;
+            }).join("")}</div>`;
+          }
+        }
+        rows += `</div>`;
+      }
+      body = `<div class="grid" style="--cols:${cols}">${rows}</div>`;
+    }
+    const header = c.show_header && (title || subtitle || c.icon)
+      ? `<div class="header">${c.icon ? `<div class="hicon"><ha-icon icon="${esc(c.icon)}"></ha-icon></div>` : ""}${title ? `<div class="title">${esc(title)}</div>` : ""}${subtitle ? `<div class="subtitle">${esc(subtitle)}</div>` : ""}</div>`
+      : "";
+    this.shadowRoot.innerHTML = `<style>${STYLE}</style><ha-card>${header}${body}</ha-card>${this._dialogHtml()}`;
+    this._bind();
+    if (this._dialog?.focusSearch) {
+      const inp = this.shadowRoot.querySelector("input.q");
+      if (inp) { inp.focus(); const v = inp.value; inp.value = ""; inp.value = v; }
+      this._dialog.focusSearch = false;
+    }
+  }
+
+  _dialogHtml() {
+    const dlg = this._dialog;
+    if (!dlg) return "";
+    const t = this._t, c = this._config;
+    const mealName = t.meals[dlg.meal] || dlg.meal;
+    const dayTxt = dlg.date ? parseDate(dlg.date).toLocaleDateString(c.language || this._hass?.locale?.language || "en", { weekday: "long", day: "2-digit", month: "2-digit" }) : "";
+    let inner = "";
+    if (dlg.type === "picker") {
+      const head = `<div class="dtop"><div><b>${esc(c.wish_label ?? t.wish)}</b><small>${esc(dayTxt)} · ${esc(mealName)}</small></div><button class="x" data-act="close" aria-label="${esc(t.close)}">${svg(ICONS.close)}</button></div>`;
+      let secs = "";
+      if (dlg.loading) secs = `<div class="msg">${esc(t.loading)}</div>`;
+      else {
+        const s = this._sections();
+        for (const p of c.picker) {
+          if (p === "search") {
+            const q = dlg.q || "";
+            let ac = "";
+            if (q.trim().length >= 1) {
+              const nq = norm(q);
+              const hits = (dlg.remote && dlg.remoteQ === q ? dlg.remote : (this._recipes || []).filter((r) => norm(r.name).includes(nq))).slice(0, 6);
+              const { counts, last } = this._stats();
+              ac = `<div class="ac">${hits.length ? hits.map((r) => {
+                const n = r.name, i = norm(n).indexOf(nq);
+                const hl = i >= 0 ? `${esc(n.slice(0, i))}<em>${esc(n.slice(i, i + q.length))}</em>${esc(n.slice(i + q.length))}` : esc(n);
+                const k = counts.get(r.recipe_id), l = last.get(r.recipe_id);
+                const sub = k ? t.times(k) : l ? t.ago(this._daysAgo(l)) : "";
+                return `<button class="hit" data-act="pick" data-rid="${esc(r.recipe_id)}"><span>${hl}</span><small>${esc(sub)}</small></button>`;
+              }).join("") : `<div class="none">${esc(t.no_results)}</div>`}</div>`;
+            }
+            secs += `<div class="search">${svg(ICONS.search, 18)}<input class="q" type="search" enterkeyhint="search" autocomplete="off" placeholder="${esc(t.search)}" value="${esc(q)}"></div>${ac}`;
+          } else {
+            const items = s[p] || [];
+            const reshuffle = p === "random" || p === "favorites_random";
+            secs += `<div class="sec"><h3><span class="si">${svg(ICONS[p], 16)}</span>${esc(t[p])}${reshuffle ? `<button class="mix" data-act="shuffle">${svg(ICONS.random, 14)} ${esc(t.shuffle)}</button>` : ""}</h3>${
+              items.length ? `<div class="tiles" style="--n:${Math.min(c.picker_items, 4)}">${items.map(({ r, sub }) => {
+                const img = this._img(r);
+                return `<button class="tile" data-act="pick" data-rid="${esc(r.recipe_id)}">${img ? `<img src="${esc(img)}" alt="" loading="lazy" onerror="this.remove()">` : `<div class="ph">${svg(ICONS.fork, 22)}</div>`}<span>${esc(r.name)}</span><small>${esc(sub)}</small></button>`;
+              }).join("")}</div>` : `<div class="none">${esc(t.empty_section)}</div>`}</div>`;
+          }
+        }
+      }
+      let confirm = "";
+      if (dlg.pick) {
+        confirm = `<div class="confirm"><p>${esc(t.confirm(dlg.pick.name, dayTxt, mealName))}</p><div class="btns"><button class="btn" data-act="unpick">${esc(t.cancel)}</button><button class="btn primary" data-act="commit">${esc(t.yes)}</button></div></div>`;
+      }
+      inner = `${head}<div class="dbody">${secs}</div>${confirm}`;
+    } else if (dlg.type === "details") {
+      const e = dlg.entry, r = dlg.recipe || e.recipe;
+      const name = r?.name || e.title || t.note;
+      const img = this._img(r);
+      const facts = [];
+      const dur = (str, sec) => str || (sec ? (sec >= 3600 ? `${Math.floor(sec / 3600)} h${sec % 3600 ? ` ${Math.round((sec % 3600) / 60)} min` : ""}` : `${Math.round(sec / 60)} min`) : "");
+      if (r?.recipe_servings) facts.push(`${t.servings}: ${Number(r.recipe_servings).toLocaleString(c.language || this._hass?.locale?.language || "en")}`);
+      const prep = dur(r?.prep_time, r?.prep_time_seconds), cook = dur(r?.perform_time, r?.perform_time_seconds), tot = dur(r?.total_time, r?.total_time_seconds);
+      if (prep) facts.push(`${t.prep}: ${prep}`);
+      if (cook) facts.push(`${t.cook}: ${cook}`);
+      if (tot) facts.push(`${t.total}: ${tot}`);
+      const ingr = (dlg.recipe?.ingredients || []).map((i) => i.display || i.note || i.original_text || "").filter(Boolean);
+      const url = this._recipeUrl(r);
+      const btns = [];
+      if (url) btns.push(`<a class="btn" href="${esc(url)}" target="_blank" rel="noopener">${svg(ICONS.open, 18)} ${esc(t.open_mealie)}</a>`);
+      if (c.allow_change) btns.push(`<button class="btn" data-act="change">${svg(ICONS.swap, 18)} ${esc(t.change)}</button>`);
+      if (c.allow_remove) btns.push(`<button class="btn danger" data-act="remove">${svg(ICONS.delete, 18)} ${esc(t.remove)}</button>`);
+      inner = `<div class="dtop"><div><b>${esc(name)}</b><small>${esc(dayTxt)} · ${esc(mealName)}</small></div><button class="x" data-act="close" aria-label="${esc(t.close)}">${svg(ICONS.close)}</button></div>
+        <div class="dbody">${img ? `<img class="hero" src="${esc(img)}" alt="" onerror="this.remove()">` : ""}
+        ${r?.description ? `<p class="desc">${esc(r.description)}</p>` : e.description ? `<p class="desc">${esc(e.description)}</p>` : ""}
+        ${facts.length ? `<div class="facts">${facts.map((f) => `<span>${esc(f)}</span>`).join("")}</div>` : ""}
+        ${dlg.loading ? `<div class="msg">${esc(t.loading)}</div>` : ingr.length ? `<h3>${esc(t.ingredients)}</h3><ul class="ingr">${ingr.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>` : ""}
+        </div>${btns.length ? `<div class="actions">${btns.join("")}</div>` : ""}
+        ${dlg.confirmRemove ? `<div class="confirm"><p>${esc(t.remove_confirm(name))}</p><div class="btns"><button class="btn" data-act="noremove">${esc(t.cancel)}</button><button class="btn danger" data-act="doremove">${esc(t.remove)}</button></div></div>` : ""}`;
+    }
+    const toast = dlg.toast ? `<div class="toast">${esc(dlg.toast)}</div>` : "";
+    const err = dlg.error ? `<div class="msg err">${esc(dlg.error)}</div>` : "";
+    return `<div class="backdrop" data-act="backdrop"><div class="dialog" role="dialog" aria-modal="true">${inner}${err}${toast}</div></div>`;
+  }
+
+  _bind() {
+    const root = this.shadowRoot;
+    root.querySelectorAll("[data-act]").forEach((el) => {
+      el.addEventListener("click", (ev) => {
+        if (el.dataset.act === "backdrop" && ev.target !== el) return;
+        ev.stopPropagation();
+        this._act(el.dataset.act, el.dataset);
+      });
+    });
+    const q = root.querySelector("input.q");
+    if (q) {
+      q.addEventListener("input", () => {
+        this._dialog.q = q.value;
+        this._dialog.focusSearch = true;
+        this._render();
+        this._remoteSearch(q.value);
+      });
+      q.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") { const first = root.querySelector(".ac .hit"); if (first) this._act("pick", first.dataset); }
+        if (ev.key === "Escape") this._act("close", {});
+      });
+    }
+  }
+
+  _remoteSearch(q) {
+    if (!this._recipesTruncated || q.trim().length < 2) return;
+    clearTimeout(this._searchTimer);
+    this._searchTimer = setTimeout(async () => {
+      try {
+        const r = await this._call("get_recipes", { search_terms: q, result_limit: 10 });
+        if (this._dialog && this._dialog.q === q) { this._dialog.remote = r?.recipes?.items || []; this._dialog.remoteQ = q; this._dialog.focusSearch = true; this._render(); }
+      } catch (e) { /* ignore, local results stay */ }
+    }, 300);
+  }
+
+  _findRecipe(id) {
+    return (this._recipes || []).find((r) => r.recipe_id === id) || (this._dialog?.remote || []).find((r) => r.recipe_id === id);
+  }
+
+  async _openPicker(date, meal, replaceEntry = null) {
+    this._dialog = { type: "picker", date, meal, q: "", loading: !this._recipes, replace: replaceEntry };
+    this._render();
+    try { await this._ensurePickerData(); } catch (e) { this._dialog.error = `${this._t.error}: ${e?.message || e}`; }
+    if (this._dialog) { this._dialog.loading = false; this._render(); }
+  }
+
+  async _act(act, ds) {
+    const c = this._config, t = this._t;
+    switch (act) {
+      case "wish": return this._openPicker(ds.date, ds.meal);
+      case "planned": {
+        const e = this._plan.find((x) => String(x.mealplan_id) === String(ds.id));
+        if (!e) return;
+        const mode = c.recipe_tap_action;
+        if (mode === "none") return;
+        if (mode === "mealie") { const u = this._recipeUrl(e.recipe); if (u) window.open(u, "_blank", "noopener"); return; }
+        if (mode === "change" && c.allow_change) return this._openPicker(String(e.mealplan_date).slice(0, 10), e.entry_type, e);
+        this._dialog = { type: "details", entry: e, date: String(e.mealplan_date).slice(0, 10), meal: e.entry_type, loading: !!e.recipe };
+        this._render();
+        if (e.recipe?.recipe_id) {
+          try { const r = await this._call("get_recipe", { recipe_id: e.recipe.slug || e.recipe.recipe_id }); if (this._dialog?.entry === e) this._dialog.recipe = r?.recipe; }
+          catch (err) { /* keep basic info */ }
+          if (this._dialog?.entry === e) { this._dialog.loading = false; this._render(); }
+        }
+        return;
+      }
+      case "close": case "backdrop": this._dialog = null; return this._render();
+      case "shuffle": return this._render();
+      case "pick": {
+        const r = this._findRecipe(ds.rid);
+        if (!r) return;
+        if (c.confirm_wish) { this._dialog.pick = r; return this._render(); }
+        this._dialog.pick = r;
+        return this._act("commit", {});
+      }
+      case "unpick": this._dialog.pick = null; return this._render();
+      case "commit": {
+        const d = this._dialog;
+        if (!d?.pick || d.saving) return;
+        d.saving = true;
+        try {
+          if (d.replace) await this._call("update_mealplan", { mealplan_id: String(d.replace.mealplan_id), date: d.date, entry_type: d.meal, recipe_id: d.pick.recipe_id });
+          else await this._call("set_mealplan", { date: d.date, entry_type: d.meal, recipe_id: d.pick.recipe_id });
+          this._dialog = { ...d, pick: null, toast: t.saved, saving: false };
+          this._render();
+          await this._refresh();
+          setTimeout(() => { if (this._dialog?.toast) { this._dialog = null; this._render(); } }, 900);
+        } catch (e) {
+          d.saving = false; d.error = `${t.error}: ${e?.message || e}`; this._render();
+        }
+        return;
+      }
+      case "change": {
+        const e = this._dialog?.entry;
+        if (e && c.allow_change) return this._openPicker(String(e.mealplan_date).slice(0, 10), e.entry_type, e);
+        return;
+      }
+      case "remove": this._dialog.confirmRemove = true; return this._render();
+      case "noremove": this._dialog.confirmRemove = false; return this._render();
+      case "doremove": {
+        const e = this._dialog?.entry;
+        if (!e || !c.allow_remove) return;
+        try { await this._call("delete_mealplan", { mealplan_id: String(e.mealplan_id) }); this._dialog = null; await this._refresh(); }
+        catch (err) { this._dialog.error = `${t.error}: ${err?.message || err}`; this._render(); }
+        return;
+      }
+    }
+  }
+}
+
+const STYLE = `
+:host{--mw-accent:var(--mealie-wishlist-accent,var(--primary-color,#e58325));display:block}
+ha-card{padding:16px 16px 8px;overflow:hidden}
+.header{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.hicon{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:var(--mw-accent);background:color-mix(in srgb,var(--mw-accent) 14%,transparent)}
+.title{font-size:1.15rem;font-weight:600;color:var(--primary-text-color)}
+.subtitle{color:var(--secondary-text-color);font-size:.9rem;margin-left:auto}
+.grid{display:flex;flex-direction:column}
+.row{display:grid;grid-template-columns:minmax(80px,96px) repeat(var(--cols),minmax(0,1fr));gap:8px;padding:8px 0;border-bottom:1px solid var(--divider-color,#e4e6ea);align-items:stretch}
+.row:last-child{border-bottom:0}
+.row.head{font-size:.75rem;color:var(--secondary-text-color);padding:0 0 6px;text-transform:none}
+.day{display:flex;flex-direction:column;justify-content:center;color:var(--primary-text-color);text-transform:capitalize}
+.day b{font-size:.98rem}.day small{color:var(--secondary-text-color);font-size:.78rem}
+.cell{display:flex;flex-direction:column;gap:6px;min-width:0}
+button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:pointer;text-align:left}
+.meal{display:flex;flex-direction:column;border-radius:12px;background:var(--secondary-background-color,#f1f2f4);overflow:hidden;min-height:64px;flex:1;color:var(--primary-text-color)}
+.meal img{width:100%;height:56px;object-fit:cover;display:block}
+.meal span{padding:8px 10px;font-size:.88rem;line-height:1.25;overflow-wrap:anywhere}
+.wish{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:64px;border-radius:12px;border:2px dashed var(--mw-accent);background:color-mix(in srgb,var(--mw-accent) 9%,transparent);color:var(--mw-accent);font-weight:600;font-size:.9rem;text-align:center;padding:6px}
+.wish:hover,.meal:hover,.tile:hover,.hit:hover{filter:brightness(.97)}
+.wish:focus-visible,.meal:focus-visible,.tile:focus-visible{outline:3px solid color-mix(in srgb,var(--mw-accent) 45%,transparent)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.msg{padding:12px 4px;color:var(--secondary-text-color)}.err{color:var(--error-color,#db4437)}
+.backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9;padding:12px}
+.dialog{position:relative;background:var(--card-background-color,#fff);color:var(--primary-text-color);border-radius:22px;width:min(560px,100%);max-height:min(88vh,860px);display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.25);overflow:hidden}
+.dtop{display:flex;align-items:flex-start;gap:8px;padding:18px 18px 10px}
+.dtop b{font-size:1.15rem;display:block}.dtop small{color:var(--secondary-text-color);display:block;margin-top:2px;text-transform:capitalize}
+.x{margin-left:auto;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--secondary-background-color,#f1f2f4);color:var(--secondary-text-color);flex:none}
+.dbody{padding:0 18px 18px;overflow:auto}
+.search{position:relative;display:flex;align-items:center;color:var(--secondary-text-color)}
+.search svg{position:absolute;left:13px}
+.search input{width:100%;font:inherit;font-size:1rem;padding:12px 14px 12px 40px;border-radius:12px;border:2px solid var(--mw-accent);outline:0;background:var(--card-background-color,#fff);color:var(--primary-text-color)}
+.ac{border:1px solid var(--divider-color,#e4e6ea);border-radius:12px;margin-top:6px;overflow:hidden}
+.hit{display:flex;justify-content:space-between;gap:8px;width:100%;padding:10px 14px;font-size:.92rem}
+.hit+.hit{border-top:1px solid var(--divider-color,#e4e6ea)}
+.hit em{font-style:normal;font-weight:700;color:var(--mw-accent)}.hit small{color:var(--secondary-text-color);white-space:nowrap}
+.none{padding:10px 14px;color:var(--secondary-text-color);font-size:.9rem}
+.sec{margin-top:16px}
+.sec h3,.dbody h3{font-size:.92rem;margin:0 0 8px;display:flex;align-items:center;gap:6px}
+.si{color:var(--mw-accent);display:flex}
+.mix{margin-left:auto;font-weight:400;color:var(--mw-accent);font-size:.82rem;display:flex;align-items:center;gap:4px}
+.tiles{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:8px}
+@media (max-width:480px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{display:flex;flex-direction:column;background:var(--secondary-background-color,#f1f2f4);border-radius:12px;overflow:hidden;font-size:.82rem;line-height:1.25}
+.tile img,.tile .ph{width:100%;height:64px;object-fit:cover;display:grid;place-items:center;color:var(--secondary-text-color);background:color-mix(in srgb,var(--mw-accent) 10%,transparent)}
+.tile span{padding:6px 8px 2px;overflow-wrap:anywhere}.tile small{padding:0 8px 8px;color:var(--secondary-text-color);min-height:1.1em}
+.confirm{position:absolute;inset:auto 0 0 0;background:var(--card-background-color,#fff);border-top:1px solid var(--divider-color,#e4e6ea);padding:16px 18px;box-shadow:0 -8px 24px rgba(0,0,0,.12)}
+.confirm p{margin:0 0 12px;font-size:1rem}
+.btns{display:flex;justify-content:flex-end;gap:8px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border-radius:999px;background:var(--secondary-background-color,#f1f2f4);color:var(--primary-text-color);font-weight:500;text-decoration:none;font-size:.92rem}
+.btn.primary{background:var(--mw-accent);color:var(--text-primary-color,#fff)}
+.btn.danger{color:var(--error-color,#db4437)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;padding:12px 18px 18px;border-top:1px solid var(--divider-color,#e4e6ea)}
+.hero{width:100%;max-height:220px;object-fit:cover;border-radius:14px;display:block;margin-bottom:12px}
+.desc{margin:0 0 10px;color:var(--secondary-text-color)}
+.facts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}.facts span{background:var(--secondary-background-color,#f1f2f4);border-radius:999px;padding:4px 10px;font-size:.82rem}
+.ingr{margin:0;padding-left:18px;line-height:1.6}
+.toast{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);background:var(--mw-accent);color:var(--text-primary-color,#fff);padding:10px 18px;border-radius:999px;font-weight:600}
+`;
+
+if (!customElements.get("mealie-wishlist-card")) {
+  customElements.define("mealie-wishlist-card", MealieWishlistCard);
+  window.customCards = window.customCards || [];
+  window.customCards.push({
+    type: "mealie-wishlist-card",
+    name: "Mealie Wishlist",
+    description: "Meal plan for the next days with a one-tap 'wish a meal' button for empty slots.",
+    preview: false,
+    documentationURL: "https://github.com/andrelung/mealie-wishlist-card",
+  });
+  console.info(`%c MEALIE-WISHLIST-CARD %c ${MW_VERSION} `, "background:#e58325;color:#fff;font-weight:700", "background:#444;color:#fff");
+}
+})();
