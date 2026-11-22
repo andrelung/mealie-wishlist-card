@@ -79,6 +79,7 @@ url: https://mealie.example.com        # for images and "Open in Mealie"
 | `favorites_min_rating` | `4` | A recipe counts as favourite from this rating |
 | `confirm_wish` | `false` | Ask before saving a wish |
 | `recipe_tap_action` | `details` | Tap on a planned recipe: `details`, `mealie`, `change`, `none` |
+| `allow_open_mealie` | `true` | Show *Open in Mealie* in the details (needs `url`) |
 | `allow_change` | `true` | Allow swapping a planned recipe |
 | `allow_remove` | `true` | Allow removing a planned recipe |
 | `show_images` | `true` | Show recipe images (needs `url`) |

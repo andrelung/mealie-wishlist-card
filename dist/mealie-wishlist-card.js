@@ -7,7 +7,7 @@
  */
 (() => {
 "use strict";
-const MW_VERSION = "0.3.3";
+const MW_VERSION = "0.3.4";
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "side", "dessert", "snack", "drink"];
 const PICKER_SECTIONS = ["search", "favorites_random", "most_cooked", "not_cooked_lately", "random"];
@@ -133,6 +133,7 @@ const DEFAULTS = {
   show_images: true,
   url: "",
   recipe_tap_action: "details",
+  allow_open_mealie: true,
   allow_change: true,
   allow_remove: true,
   confirm_wish: false,
@@ -162,7 +163,7 @@ const EDITOR_I18N = {
       picker: "Bereiche der Auswahl (Reihenfolge)", picker_items: "Rezepte pro Bereich", history_days: "Zeitraum für Statistik (Tage)",
       favorites_min_rating: "Lieblingsrezept ab Bewertung", confirm_wish: "Vor dem Eintragen nachfragen",
       allow_free_text: "Ohne Treffer: „Name als Essen eintragen“ anbieten", allow_create_recipe: "Ohne Treffer: „Rezept in Mealie anlegen“ anbieten",
-      recipe_tap_action: "Tippen auf ein geplantes Rezept", allow_change: "Tauschen erlauben", allow_remove: "Entfernen erlauben",
+      recipe_tap_action: "Tippen auf ein geplantes Rezept", allow_open_mealie: "„In Mealie öffnen“ erlauben", allow_change: "Tauschen erlauben", allow_remove: "Entfernen erlauben",
       show_images: "Bilder anzeigen", max_width: "Maximale Breite (optional)", tile_min_height: "Mindesthöhe der Kacheln",
       url: "Mealie-Adresse", language: "Sprache",
     },
@@ -183,6 +184,7 @@ const EDITOR_I18N = {
       allow_free_text: "Findet die Suche nichts, kann der eingetippte Name als Essen ohne Rezept (Notiz) in den Plan.",
       allow_create_recipe: "Findet die Suche nichts, öffnet ein Link das Formular „Neues Rezept“ in Mealie. Braucht die Mealie-Adresse.",
       recipe_tap_action: "Was beim Antippen eines bereits geplanten Essens passiert.",
+      allow_open_mealie: "Zeigt in der Detailansicht „In Mealie öffnen“ (öffnet das Rezept in Mealie). Braucht die Mealie-Adresse.",
       allow_change: "Erlaubt in der Detailansicht „Essen tauschen“.",
       allow_remove: "Erlaubt in der Detailansicht „Aus Plan entfernen“ (mit Rückfrage).",
       show_images: "Zeigt Rezeptbilder. Braucht die Mealie-Adresse.",
@@ -202,7 +204,7 @@ const EDITOR_I18N = {
       picker: "Picker sections (order)", picker_items: "Recipes per section", history_days: "History for statistics (days)",
       favorites_min_rating: "Favourite from rating", confirm_wish: "Ask before adding",
       allow_free_text: "No result: offer 'Add name as meal'", allow_create_recipe: "No result: offer 'Create recipe in Mealie'",
-      recipe_tap_action: "Tap on a planned recipe", allow_change: "Allow swapping", allow_remove: "Allow removing",
+      recipe_tap_action: "Tap on a planned recipe", allow_open_mealie: "Allow open in Mealie", allow_change: "Allow swapping", allow_remove: "Allow removing",
       show_images: "Show images", max_width: "Maximum width (optional)", tile_min_height: "Minimum tile height",
       url: "Mealie URL", language: "Language",
     },
@@ -223,6 +225,7 @@ const EDITOR_I18N = {
       allow_free_text: "If the search finds nothing, the typed name can be added as a meal without recipe (note).",
       allow_create_recipe: "If the search finds nothing, a link opens Mealie's 'New recipe' form. Needs the Mealie URL.",
       recipe_tap_action: "What happens when a planned meal is tapped.",
+      allow_open_mealie: "Shows 'Open in Mealie' in the details (opens the recipe in Mealie). Needs the Mealie URL.",
       allow_change: "Allows 'Swap meal' in the details.",
       allow_remove: "Allows 'Remove from plan' in the details (with confirmation).",
       show_images: "Shows recipe images. Needs the Mealie URL.",
@@ -273,6 +276,7 @@ class MealieWishlistCard extends HTMLElement {
         ] },
         { type: "expandable", name: "", title: L.sections.planned, flatten: true, schema: [
           { name: "recipe_tap_action", selector: { select: { mode: "dropdown", options: ["details", "mealie", "change", "none"].map((v) => ({ value: v, label: L.tap[v] })) } } },
+          { name: "allow_open_mealie", selector: { boolean: {} } },
           { name: "allow_change", selector: { boolean: {} } },
           { name: "allow_remove", selector: { boolean: {} } },
         ] },
@@ -570,7 +574,7 @@ class MealieWishlistCard extends HTMLElement {
       const ingr = (dlg.recipe?.ingredients || []).map((i) => i.display || i.note || i.original_text || "").filter(Boolean);
       const url = this._recipeUrl(r);
       const btns = [];
-      if (url) btns.push(`<a class="btn" href="${esc(url)}" target="_blank" rel="noopener">${svg(ICONS.open, 18)} ${esc(t.open_mealie)}</a>`);
+      if (url && c.allow_open_mealie) btns.push(`<a class="btn" href="${esc(url)}" target="_blank" rel="noopener">${svg(ICONS.open, 18)} ${esc(t.open_mealie)}</a>`);
       if (c.allow_change) btns.push(`<button class="btn" data-act="change">${svg(ICONS.swap, 18)} ${esc(t.change)}</button>`);
       if (c.allow_remove) btns.push(`<button class="btn danger" data-act="remove">${svg(ICONS.delete, 18)} ${esc(t.remove)}</button>`);
       inner = `<div class="dtop"><div><b>${esc(name)}</b><small>${esc(dayTxt)} · ${esc(mealName)}</small></div><button class="x" data-act="close" aria-label="${esc(t.close)}">${svg(ICONS.close)}</button></div>
@@ -650,7 +654,7 @@ class MealieWishlistCard extends HTMLElement {
         if (!e) return;
         const mode = c.recipe_tap_action;
         if (mode === "none") return;
-        if (mode === "mealie") { const u = this._recipeUrl(e.recipe); if (u) window.open(u, "_blank", "noopener"); return; }
+        if (mode === "mealie" && c.allow_open_mealie) { const u = this._recipeUrl(e.recipe); if (u) window.open(u, "_blank", "noopener"); return; }
         if (mode === "change" && c.allow_change) return this._openPicker(String(e.mealplan_date).slice(0, 10), e.entry_type, e);
         this._dialog = { type: "details", entry: e, date: String(e.mealplan_date).slice(0, 10), meal: e.entry_type, loading: !!e.recipe };
         this._render();
@@ -798,7 +802,7 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 const EDITOR_DEFAULTS = {
   show_header: true, icon: DEFAULTS.icon, days: DEFAULTS.days, meals: DEFAULTS.meals, picker: DEFAULTS.picker,
   picker_items: DEFAULTS.picker_items, history_days: DEFAULTS.history_days, favorites_min_rating: DEFAULTS.favorites_min_rating,
-  confirm_wish: false, tile_min_height: 64, allow_free_text: true, allow_create_recipe: true, recipe_tap_action: "details", allow_change: true, allow_remove: true, show_images: true,
+  confirm_wish: false, tile_min_height: 64, allow_free_text: true, allow_create_recipe: true, recipe_tap_action: "details", allow_open_mealie: true, allow_change: true, allow_remove: true, show_images: true,
 };
 
 class MealieWishlistCardEditor extends HTMLElement {

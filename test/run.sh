@@ -36,3 +36,5 @@ run opt-beide "step=noteopts&exp=NL&cfg=%7B%22url%22%3A%22https%3A%2F%2Fm.exampl
 run opt-nur-notiz "step=noteopts&exp=N&cfg=%7B%22url%22%3A%22https%3A%2F%2Fm.example%22%2C%22allow_create_recipe%22%3Afalse%7D" 300
 run opt-nur-link "step=noteopts&exp=L&cfg=%7B%22url%22%3A%22https%3A%2F%2Fm.example%22%2C%22allow_free_text%22%3Afalse%7D" 300
 run opt-keine "step=noteopts&exp=&cfg=%7B%22url%22%3A%22https%3A%2F%2Fm.example%22%2C%22allow_free_text%22%3Afalse%2C%22allow_create_recipe%22%3Afalse%7D" 300
+run mealie-an "step=openmealie&exp=true&cfg=%7B%22url%22%3A%22https%3A%2F%2Fm.example%22%7D" 300
+run mealie-aus "step=openmealie&exp=false&cfg=%7B%22url%22%3A%22https%3A%2F%2Fm.example%22%2C%22allow_open_mealie%22%3Afalse%7D" 300

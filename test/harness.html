@@ -106,8 +106,9 @@ window.addEventListener('error',e=>document.title='JSERROR '+e.message);
    }
    if(step==='confirm'||step==='commit'){ click('.ac .hit'); await wait(50); }
    if(step==='commit'){ const cb=sr.querySelector('[data-act=commit]'); if(cb) cb.click(); await wait(150); if(sr.querySelector('.dialog')) throw new Error('Dialog noch offen'); if(!sr.querySelector('.toast')) throw new Error('keine Meldung'); }
-   if(step==='details'||step==='remove'||step==='change'||step==='doremove'){ click('[data-act=close]'); await wait(30); click('.meal'); await wait(200); if(step==='details'){ click('[data-act=toggle_details]'); await wait(50); if(!sr.querySelector('.ingr')) throw new Error('Zutaten nicht sichtbar'); } }
+   if(step==='details'||step==='remove'||step==='change'||step==='doremove'||step==='openmealie'){ click('[data-act=close]'); await wait(30); click('.meal'); await wait(200); if(step==='details'){ click('[data-act=toggle_details]'); await wait(50); if(!sr.querySelector('.ingr')) throw new Error('Zutaten nicht sichtbar'); } }
    if(step==='remove'){ click('[data-act=remove]'); await wait(50); }
+   if(step==='openmealie'){ const has=!![...sr.querySelectorAll('.actions a.btn')].length; if(String(has)!==P.get('exp')) throw new Error('Mealie-Knopf '+has); }
    if(step==='doremove'){ click('[data-act=remove]'); await wait(50); const n=plan.length; click('[data-act=doremove]'); await wait(200); if(plan.length!==n-1) throw new Error('nicht entfernt'); if(sr.querySelector('.dialog')) throw new Error('Dialog offen'); if(!sr.querySelector('.toast')) throw new Error('keine Meldung'); }
    if(step==='change'){ click('[data-act=change]'); await wait(200); click('.tile'); await wait(50); const cb2=sr.querySelector('[data-act=commit]'); if(cb2) cb2.click(); await wait(1300); }
  }
