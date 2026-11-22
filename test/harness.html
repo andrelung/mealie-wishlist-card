@@ -65,7 +65,7 @@ window.addEventListener('error',e=>document.title='JSERROR '+e.message);
    const f=ed.querySelector('ha-form'); let got=null;
    ed.addEventListener('config-changed',e=>got=e.detail.config);
    f.dispatchEvent(new CustomEvent('value-changed',{detail:{value:{...f.data,show_header:false}}}));
-   const ok=f.data.show_header===true&&f.data.show_images===true&&f.data.allow_remove===true&&f.data.confirm_wish===true&&f.data.meals[0]==='lunch'&&got&&got.show_header===false;
+   const ok=f.data.show_header===true&&f.data.show_images===true&&f.data.allow_remove===true&&f.data.confirm_wish===false&&f.data.meals[0]==='lunch'&&got&&got.show_header===false;
    document.title=(ok?'OK ':'TESTERROR ')+JSON.stringify({sh:f.data.show_header,img:f.data.show_images,got:got&&got.show_header});
    return;
  }
@@ -76,10 +76,10 @@ window.addEventListener('error',e=>document.title='JSERROR '+e.message);
      const inp=sr.querySelector('input.q'); inp.value='gno'; inp.dispatchEvent(new Event('input')); await wait(100);
    }
    if(step==='confirm'||step==='commit'){ click('.ac .hit'); await wait(50); }
-   if(step==='commit'){ click('[data-act=commit]'); await wait(1300); }
-   if(step==='details'||step==='remove'||step==='change'){ click('[data-act=close]'); await wait(30); click('.meal'); await wait(200); }
+   if(step==='commit'){ const cb=sr.querySelector('[data-act=commit]'); if(cb) cb.click(); await wait(1300); }
+   if(step==='details'||step==='remove'||step==='change'){ click('[data-act=close]'); await wait(30); click('.meal'); await wait(200); if(step==='details'){ click('[data-act=toggle_details]'); await wait(50); if(!sr.querySelector('.ingr')) throw new Error('Zutaten nicht sichtbar'); } }
    if(step==='remove'){ click('[data-act=remove]'); await wait(50); }
-   if(step==='change'){ click('[data-act=change]'); await wait(200); click('.tile'); await wait(50); click('[data-act=commit]'); await wait(1300); }
+   if(step==='change'){ click('[data-act=change]'); await wait(200); click('.tile'); await wait(50); const cb2=sr.querySelector('[data-act=commit]'); if(cb2) cb2.click(); await wait(1300); }
  }
  document.title='OK '+JSON.stringify(CALLS.map(c=>c.service));
  }catch(e){document.title='TESTERROR '+e.message}

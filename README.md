@@ -17,8 +17,8 @@ A Home Assistant dashboard card for [Mealie](https://mealie.io). It shows your m
   - most cooked (counted from your meal plan history)
   - not cooked in a while (meal plan history and Mealie's "last made")
   - random recipes
-- Optional confirmation before a wish is saved
-- Tap on a planned recipe: details (image, times, servings, ingredients) with *Open in Mealie*, *Wish something else* and *Remove from plan* – each action can be disabled, or the tap can open Mealie / the picker directly / do nothing
+- Tap a recipe and it is wished – an optional confirmation can be switched on
+- Tap on a planned recipe: details (image, description; times, servings and ingredients behind a *Details* toggle) with *Open in Mealie*, *Swap meal* and *Remove from plan* – each action can be disabled, or the tap can open Mealie / the picker directly / do nothing
 - Header (title, subtitle, icon) freely configurable, each part can be hidden
 - German and English, follows the Home Assistant language
 - Visual editor
@@ -76,18 +76,19 @@ url: https://mealie.example.com        # for images and "Open in Mealie"
 | `picker_items` | `4` | Recipes per section |
 | `history_days` | `180` | Days of meal plan history used for the statistics |
 | `favorites_min_rating` | `4` | A recipe counts as favourite from this rating |
-| `confirm_wish` | `true` | Ask before saving a wish |
+| `confirm_wish` | `false` | Ask before saving a wish |
 | `recipe_tap_action` | `details` | Tap on a planned recipe: `details`, `mealie`, `change`, `none` |
-| `allow_change` | `true` | Allow replacing a planned recipe |
+| `allow_change` | `true` | Allow swapping a planned recipe |
 | `allow_remove` | `true` | Allow removing a planned recipe |
 | `show_images` | `true` | Show recipe images (needs `url`) |
 | `url` | – | Mealie URL, reachable from the device showing the dashboard |
 | `mealie_group_slug` | `home` | Group part of recipe links |
 | `language` | HA language | `de` or `en` |
+| `max_width` | – | Optional maximum width, e.g. `900px` (the card is centred) |
 
 Theme variables: `--mealie-wishlist-accent` (defaults to `--primary-color`), `--mealie-wishlist-max-width` (defaults to a width that fits the number of meal columns; the card is centred). In a narrow column the meals wrap below each day with a small label.
 
-Tip: use a *Panel* view (or full width in a sections view) so the card can take the width it needs.
+**Width:** the card fills the space it gets. In a *sections* view set it in the card's *Layout* tab (grid columns) and widen the section if needed; alternatively use `max_width` or a *panel* view.
 
 ## Notes
 

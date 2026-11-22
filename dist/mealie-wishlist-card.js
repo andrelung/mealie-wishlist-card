@@ -7,7 +7,7 @@
  */
 (() => {
 "use strict";
-const MW_VERSION = "0.1.1";
+const MW_VERSION = "0.2.0";
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "side", "dessert", "snack", "drink"];
 const PICKER_SECTIONS = ["search", "favorites_random", "most_cooked", "not_cooked_lately", "random"];
@@ -35,7 +35,8 @@ const I18N = {
     close: "Schließen",
     saved: "Gewünscht!",
     open_mealie: "In Mealie öffnen",
-    change: "Anderes Essen wünschen",
+    change: "Essen tauschen",
+    details: "Details",
     remove: "Aus Plan entfernen",
     remove_confirm: (r) => `„${r}“ wirklich aus dem Plan entfernen?`,
     ingredients: "Zutaten",
@@ -72,7 +73,8 @@ const I18N = {
     close: "Close",
     saved: "Wished!",
     open_mealie: "Open in Mealie",
-    change: "Wish something else",
+    change: "Swap meal",
+    details: "Details",
     remove: "Remove from plan",
     remove_confirm: (r) => `Really remove "${r}" from the plan?`,
     ingredients: "Ingredients",
@@ -120,7 +122,7 @@ const DEFAULTS = {
   recipe_tap_action: "details",
   allow_change: true,
   allow_remove: true,
-  confirm_wish: true,
+  confirm_wish: false,
   language: undefined,
 };
 
@@ -168,11 +170,12 @@ class MealieWishlistCard extends HTMLElement {
         { type: "expandable", name: "", title: "Planned recipes", flatten: true, schema: [
           { name: "recipe_tap_action", selector: { select: { mode: "dropdown", options: [
             { value: "details", label: "Details" }, { value: "mealie", label: "Open in Mealie" },
-            { value: "change", label: "Wish something else" }, { value: "none", label: "Nothing" } ] } } },
+            { value: "change", label: "Swap meal" }, { value: "none", label: "Nothing" } ] } } },
           { name: "allow_change", selector: { boolean: {} } },
           { name: "allow_remove", selector: { boolean: {} } },
         ] },
         { name: "show_images", selector: { boolean: {} } },
+        { name: "max_width", selector: { text: {} } },
         { name: "url", selector: { text: { type: "url" } } },
         { name: "language", selector: { select: { mode: "dropdown", options: [{ value: "de", label: "Deutsch" }, { value: "en", label: "English" }] } } },
       ],
@@ -180,8 +183,8 @@ class MealieWishlistCard extends HTMLElement {
         config_entry_id: "Mealie integration", show_header: "Show header", title: "Title", subtitle: "Subtitle", icon: "Icon",
         days: "Number of days", meals: "Meals (columns)", wish_label: "Wish button text", picker: "Picker sections (order)",
         picker_items: "Recipes per section", history_days: "History for statistics (days)", favorites_min_rating: "Favourite = rating at least",
-        confirm_wish: "Ask before wishing", recipe_tap_action: "Tap on planned recipe", allow_change: "Allow changing",
-        allow_remove: "Allow removing", show_images: "Show images", url: "Mealie URL (images, links)", language: "Language",
+        confirm_wish: "Ask before wishing", recipe_tap_action: "Tap on planned recipe", allow_change: "Allow swapping",
+        allow_remove: "Allow removing", show_images: "Show images", max_width: "Max. width (e.g. 900px, optional)", url: "Mealie URL (images, links)", language: "Language",
       }[s.name]),
     };
   }
@@ -229,7 +232,7 @@ class MealieWishlistCard extends HTMLElement {
 
   getCardSize() { return 1 + this._config.days * 2; }
 
-  getGridOptions() { return { columns: "full", min_columns: 6, rows: "auto" }; }
+  getGridOptions() { return { columns: 12, min_columns: 6, rows: "auto" }; }
 
   connectedCallback() {
     this._timer = setInterval(() => this._hass && this._refresh(), 5 * 60 * 1000);
@@ -392,7 +395,7 @@ class MealieWishlistCard extends HTMLElement {
     const header = c.show_header && (title || subtitle || c.icon)
       ? `<div class="header">${c.icon ? `<div class="hicon"><ha-icon icon="${esc(c.icon)}"></ha-icon></div>` : ""}${title ? `<div class="title">${esc(title)}</div>` : ""}${subtitle ? `<div class="subtitle">${esc(subtitle)}</div>` : ""}</div>`
       : "";
-    this.shadowRoot.innerHTML = `<style>${STYLE}</style><ha-card style="--cols:${cols}">${header}${body}</ha-card>${this._dialogHtml()}`;
+    this.shadowRoot.innerHTML = `<style>${STYLE}</style><ha-card style="--cols:${cols}${c.max_width ? `;--mealie-wishlist-max-width:${esc(c.max_width)}` : ""}">${header}${body}</ha-card>${this._dialogHtml()}`;
     this._applyWidth();
     this._bind();
     if (this._dialog?.focusSearch) {
@@ -468,8 +471,9 @@ class MealieWishlistCard extends HTMLElement {
       inner = `<div class="dtop"><div><b>${esc(name)}</b><small>${esc(dayTxt)} · ${esc(mealName)}</small></div><button class="x" data-act="close" aria-label="${esc(t.close)}">${svg(ICONS.close)}</button></div>
         <div class="dbody">${img ? `<img class="hero" src="${esc(img)}" alt="" onerror="this.remove()">` : ""}
         ${r?.description ? `<p class="desc">${esc(r.description)}</p>` : e.description ? `<p class="desc">${esc(e.description)}</p>` : ""}
-        ${facts.length ? `<div class="facts">${facts.map((f) => `<span>${esc(f)}</span>`).join("")}</div>` : ""}
-        ${dlg.loading ? `<div class="msg">${esc(t.loading)}</div>` : ingr.length ? `<h3>${esc(t.ingredients)}</h3><ul class="ingr">${ingr.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>` : ""}
+        ${facts.length || ingr.length || dlg.loading ? `<button class="more-btn${dlg.showDetails ? " open" : ""}" data-act="toggle_details" aria-expanded="${dlg.showDetails ? "true" : "false"}">${esc(t.details)} <span class="chev">▾</span></button>` : ""}
+        ${dlg.showDetails ? `${facts.length ? `<div class="facts">${facts.map((f) => `<span>${esc(f)}</span>`).join("")}</div>` : ""}
+        ${dlg.loading ? `<div class="msg">${esc(t.loading)}</div>` : ingr.length ? `<h3>${esc(t.ingredients)}</h3><ul class="ingr">${ingr.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>` : ""}` : ""}
         </div>${btns.length ? `<div class="actions">${btns.join("")}</div>` : ""}
         ${dlg.confirmRemove ? `<div class="confirm"><p>${esc(t.remove_confirm(name))}</p><div class="btns"><button class="btn" data-act="noremove">${esc(t.cancel)}</button><button class="btn danger" data-act="doremove">${esc(t.remove)}</button></div></div>` : ""}`;
     }
@@ -575,6 +579,7 @@ class MealieWishlistCard extends HTMLElement {
         if (e && c.allow_change) return this._openPicker(String(e.mealplan_date).slice(0, 10), e.entry_type, e);
         return;
       }
+      case "toggle_details": this._dialog.showDetails = !this._dialog.showDetails; return this._render();
       case "remove": this._dialog.confirmRemove = true; return this._render();
       case "noremove": this._dialog.confirmRemove = false; return this._render();
       case "doremove": {
@@ -590,7 +595,7 @@ class MealieWishlistCard extends HTMLElement {
 
 const STYLE = `
 :host{--mw-accent:var(--mealie-wishlist-accent,var(--primary-color,#e58325));display:block}
-ha-card{display:block;padding:16px 16px 8px;overflow:hidden;max-width:var(--mealie-wishlist-max-width,calc(140px + var(--cols,1) * 260px));margin:0 auto;box-sizing:border-box}
+ha-card{display:block;padding:16px 16px 8px;overflow:hidden;max-width:var(--mealie-wishlist-max-width,none);margin:0 auto;box-sizing:border-box;height:100%}
 .header{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
 .hicon{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:var(--mw-accent);background:color-mix(in srgb,var(--mw-accent) 14%,transparent)}
 .title{font-size:1.15rem;font-weight:600;color:var(--primary-text-color)}
@@ -648,6 +653,8 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 .actions{display:flex;flex-wrap:wrap;gap:8px;padding:12px 18px 18px;border-top:1px solid var(--divider-color,#e4e6ea)}
 .hero{width:100%;max-height:220px;object-fit:cover;border-radius:14px;display:block;margin-bottom:12px}
 .desc{margin:0 0 10px;color:var(--secondary-text-color)}
+.more-btn{display:inline-flex;align-items:center;gap:6px;color:var(--mw-accent);font-weight:500;padding:6px 0;margin-bottom:8px}
+.more-btn .chev{transition:transform .15s}.more-btn.open .chev{transform:rotate(180deg)}
 .facts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}.facts span{background:var(--secondary-background-color,#f1f2f4);border-radius:999px;padding:4px 10px;font-size:.82rem}
 .ingr{margin:0;padding-left:18px;line-height:1.6}
 .toast{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);background:var(--mw-accent);color:var(--text-primary-color,#fff);padding:10px 18px;border-radius:999px;font-weight:600}
@@ -656,7 +663,7 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 const EDITOR_DEFAULTS = {
   show_header: true, icon: DEFAULTS.icon, days: DEFAULTS.days, meals: DEFAULTS.meals, picker: DEFAULTS.picker,
   picker_items: DEFAULTS.picker_items, history_days: DEFAULTS.history_days, favorites_min_rating: DEFAULTS.favorites_min_rating,
-  confirm_wish: true, recipe_tap_action: "details", allow_change: true, allow_remove: true, show_images: true,
+  confirm_wish: false, recipe_tap_action: "details", allow_change: true, allow_remove: true, show_images: true,
 };
 
 class MealieWishlistCardEditor extends HTMLElement {
