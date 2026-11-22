@@ -13,6 +13,7 @@ A Home Assistant dashboard card for [Mealie](https://mealie.io). It shows your m
 - Empty slot → one tap on **"Wish a meal"** opens the recipe picker
 - Picker sections, configurable and in any order:
   - search with autocomplete
+  - **pinned options**: recipes from chosen Mealie categories/tags or by name, plus options without a recipe (e.g. "Leftovers", "Cook from the pantry") that are added as meal plan notes
   - favourites (recipes with a rating at or above a threshold, shuffled)
   - most cooked (counted from your meal plan history)
   - not cooked in a while (meal plan history and Mealie's "last made")
@@ -73,8 +74,14 @@ url: https://mealie.example.com        # for images and "Open in Mealie"
 | `days` | `3` | Number of days starting today (1–31) |
 | `meals` | `[dinner]` | Meal types shown as columns |
 | `wish_label` | translated | Text of the wish button |
-| `picker` | all five | Picker sections and their order: `search`, `favorites_random`, `most_cooked`, `not_cooked_lately`, `random` |
-| `picker_items` | `4` | Recipes per section |
+| `picker` | all | Picker sections and their order: `search`, `pinned`, `favorites_random`, `most_cooked`, `not_cooked_lately`, `random` |
+| `picker_items` | `4` | Recipes per section (not for search and pinned) |
+| `pinned_title` | translated | Heading of the pinned section |
+| `pinned_categories` | `[]` | Mealie categories (name or slug) whose recipes are always pinned |
+| `pinned_tags` | `[]` | Mealie tags (name or slug) whose recipes are always pinned |
+| `pinned_recipes` | `[]` | Single recipes (name or slug) that are always pinned |
+| `pinned_notes` | `[]` | Pinned options without a recipe; added as meal plan notes |
+| `pinned_exclude_elsewhere` | `true` | Hide pinned recipes from the other sections |
 | `history_days` | `180` | Days of meal plan history used for the statistics |
 | `favorites_min_rating` | `4` | A recipe counts as favourite from this rating |
 | `confirm_wish` | `false` | Ask before saving a wish |

@@ -18,7 +18,7 @@ if (P.get('w')) document.getElementById('wrap').style.setProperty('--w', P.get('
 const pad=n=>String(n).padStart(2,'0'); const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const day=n=>{const d=new Date();d.setDate(d.getDate()+n);return iso(d)};
 const R=(id,name,extra={})=>({recipe_id:id,user_id:'u',group_id:'g',name,slug:name.toLowerCase().replace(/[^a-z0-9]+/g,'-'),description:'',categories:[],tags:[],tools:[],image:null,rating:null,last_made:null,recipe_servings:2,prep_time:'15 min',perform_time:'25 min',total_time:'40 min',...extra});
-const recipes=[R('r1','Gnocchi mit Spinat',{rating:5}),R('r2','Erdnuss-Tofu-Bowl',{rating:4.5}),R('r3','Waffeln',{rating:4}),R('r4','Linsen-Dal',{last_made:day(-20)+'T18:00:00'}),R('r5','Shakshuka'),R('r6','Rotkohl-Salat'),R('r7','Chili sin Carne',{rating:3}),R('r8','Ofengemüse',{last_made:day(-150)+'T18:00:00'}),R('r9','Kürbis-Gnocchi'),R('r10','Pasta Verde',{rating:4})];
+const recipes=[R('r1','Gnocchi mit Spinat',{rating:5}),R('r2','Erdnuss-Tofu-Bowl',{rating:4.5}),R('r3','Waffeln',{rating:4}),R('r4','Linsen-Dal',{last_made:day(-20)+'T18:00:00'}),R('r5','Shakshuka'),R('r6','Rotkohl-Salat'),R('r7','Chili sin Carne',{rating:3}),R('r8','Ofengemüse',{last_made:day(-150)+'T18:00:00'}),R('r9','Kürbis-Gnocchi'),R('r10','Pasta Verde',{rating:4}),R('r11','Reste vom Vortag',{categories:[{category_id:'c1',name:'Planung',slug:'planung'}]})];
 if(P.get('img')){ Object.assign(recipes[0],{recipe_id:'5d61e22f-3528-4087-87e2-d04bafca5770',image:'x'}); Object.assign(recipes[2],{recipe_id:'f54f59c4-75f5-4740-81bc-a6d8b81b2df0',image:'x'}); Object.assign(recipes[1],{recipe_id:'53345f10-0f84-4911-9a07-2d90104e4011',image:'x'}); }
 let nextId=100;
 let plan=[
@@ -92,6 +92,18 @@ window.addEventListener('error',e=>document.title='JSERROR '+e.message);
      const inp=sr.querySelector('input.q'); inp.value='Pizza'; inp.dispatchEvent(new Event('input')); await wait(100);
      const got=(sr.querySelector('[data-act=note]')?'N':'')+(sr.querySelector('a.hit.add')?'L':'');
      if(got!==P.get('exp')) throw new Error('Optionen '+got+' statt '+P.get('exp'));
+   }
+   if(step==='pinned'){
+     const secs=[...sr.querySelectorAll('.sec')];
+     const first=secs[0]; if(!first||!/Feste Optionen/.test(first.querySelector('h3').textContent)) throw new Error('Bereich fehlt/falsch');
+     const names=[...first.querySelectorAll('.tile span')].map(x=>x.textContent);
+     if(names.join('|')!=='Reste vom Vortag|Vorräte leer kochen|Frische Sachen shoppen') throw new Error('Inhalt '+names.join('|'));
+     const elsewhere=secs.slice(1).some(s=>[...s.querySelectorAll('.tile span')].some(x=>x.textContent==='Reste vom Vortag'));
+     if(elsewhere) throw new Error('auch woanders');
+     if(P.get('shot')){document.title='OK shot';return;}
+     first.querySelectorAll('.tile')[1].click(); await wait(200);
+     if(!plan.some(e=>e.title==='Vorräte leer kochen')) throw new Error('Notiz fehlt');
+     if(!sr.querySelector('.toast')) throw new Error('keine Meldung');
    }
    if(step==='note'){
      const inp=sr.querySelector('input.q'); inp.value='Pizza Margherita'; inp.dispatchEvent(new Event('input')); await wait(100);

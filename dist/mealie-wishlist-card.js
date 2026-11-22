@@ -7,10 +7,10 @@
  */
 (() => {
 "use strict";
-const MW_VERSION = "0.3.5";
+const MW_VERSION = "0.4.0";
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "side", "dessert", "snack", "drink"];
-const PICKER_SECTIONS = ["search", "favorites_random", "most_cooked", "not_cooked_lately", "random"];
+const PICKER_SECTIONS = ["search", "pinned", "favorites_random", "most_cooked", "not_cooked_lately", "random"];
 
 const I18N = {
   de: {
@@ -21,6 +21,7 @@ const I18N = {
     tomorrow: "Morgen",
     meals: { breakfast: "Frühstück", lunch: "Mittagessen", dinner: "Abendessen", side: "Beilage", dessert: "Nachtisch", snack: "Snack", drink: "Getränk" },
     search: "Rezept suchen …",
+    pinned: "Feste Optionen",
     favorites_random: "Lieblingsrezepte",
     most_cooked: "Meist gekocht",
     not_cooked_lately: "Lange nicht gekocht",
@@ -65,6 +66,7 @@ const I18N = {
     tomorrow: "Tomorrow",
     meals: { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", side: "Side", dessert: "Dessert", snack: "Snack", drink: "Drink" },
     search: "Search recipes …",
+    pinned: "Pinned",
     favorites_random: "Favourites",
     most_cooked: "Most cooked",
     not_cooked_lately: "Not cooked in a while",
@@ -116,6 +118,8 @@ const ICONS = {
   swap: "M21,9L17,5V8H10V10H17V13M7,11L3,15L7,19V16H14V14H7V11Z",
   delete: "M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z",
   check: "M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z",
+  pinned: "M16,12V4H17V2H7V4H8V12L6,14V16H11.2V22H12.8V16H18V14L16,12Z",
+  note: "M14,10H19.5L14,4.5V10M5,3H15L21,9V19A2,2 0 0,1 19,21H5C3.89,21 3,20.1 3,19V5C3,3.89 3.89,3 5,3M5,12V14H19V12H5M5,16V18H14V16H5Z",
 };
 
 const DEFAULTS = {
@@ -126,7 +130,13 @@ const DEFAULTS = {
   days: 3,
   meals: ["dinner"],
   wish_label: undefined,
-  picker: ["search", "favorites_random", "most_cooked", "not_cooked_lately", "random"],
+  picker: ["search", "pinned", "favorites_random", "most_cooked", "not_cooked_lately", "random"],
+  pinned_title: undefined,
+  pinned_categories: [],
+  pinned_tags: [],
+  pinned_recipes: [],
+  pinned_notes: [],
+  pinned_exclude_elsewhere: true,
   picker_items: 4,
   history_days: 180,
   favorites_min_rating: 4,
@@ -160,7 +170,7 @@ const EDITOR_I18N = {
     labels: {
       config_entry_id: "Mealie-Integration", show_header: "Kopfzeile anzeigen", title: "Titel", subtitle: "Untertitel", icon: "Symbol",
       days: "Anzahl Tage", meals: "Mahlzeiten (Spalten)", wish_label: "Text auf dem Wunsch-Knopf",
-      picker: "Bereiche der Auswahl (Reihenfolge)", picker_items: "Rezepte pro Bereich", history_days: "Zeitraum für Statistik (Tage)",
+      picker: "Bereiche der Auswahl (Reihenfolge)", pinned_title: "Feste Optionen: Überschrift", pinned_categories: "Feste Optionen: Mealie-Kategorien", pinned_tags: "Feste Optionen: Mealie-Tags", pinned_recipes: "Feste Optionen: einzelne Rezepte", pinned_notes: "Feste Optionen: ohne Rezept", pinned_exclude_elsewhere: "Feste Optionen nicht in anderen Bereichen zeigen", picker_items: "Rezepte pro Bereich", history_days: "Zeitraum für Statistik (Tage)",
       favorites_min_rating: "Lieblingsrezept ab Bewertung", confirm_wish: "Vor dem Eintragen nachfragen",
       allow_free_text: "Ohne Treffer: „Name als Essen eintragen“ anbieten", allow_create_recipe: "Ohne Treffer: „Rezept in Mealie anlegen“ anbieten",
       recipe_tap_action: "Tippen auf ein geplantes Rezept", allow_open_mealie: "„In Mealie öffnen“ erlauben", allow_change: "Tauschen erlauben", allow_remove: "Entfernen erlauben",
@@ -177,7 +187,13 @@ const EDITOR_I18N = {
       meals: "Jede Mahlzeit wird eine Spalte. Reihenfolge per Ziehen.",
       wish_label: "Steht in leeren Feldern, z. B. „Essen wünschen“.",
       picker: "Welche Bereiche das Auswahlfenster zeigt und in welcher Reihenfolge.",
-      picker_items: "Wie viele Rezepte jeder Bereich (außer der Suche) zeigt.",
+      picker_items: "Wie viele Rezepte jeder Bereich (außer Suche und festen Optionen) zeigt.",
+      pinned_title: "Überschrift des Bereichs „Feste Optionen“. Leer = Standardtext.",
+      pinned_categories: "Alle Rezepte dieser Mealie-Kategorien erscheinen immer als feste Option (Name oder Slug, z. B. „Planung“).",
+      pinned_tags: "Alle Rezepte mit diesen Mealie-Tags erscheinen immer als feste Option.",
+      pinned_recipes: "Einzelne Rezepte per Name oder Slug, die immer angezeigt werden.",
+      pinned_notes: "Optionen ohne Rezept in Mealie, z. B. „Reste vom Vortag“. Werden als Notiz in den Plan eingetragen.",
+      pinned_exclude_elsewhere: "An: Feste Optionen tauchen nicht in Zufällig, Lieblingsrezepte usw. auf.",
       history_days: "So weit zurück wird der Speiseplan für „Meist gekocht“ und „Lange nicht gekocht“ ausgewertet.",
       favorites_min_rating: "Rezepte mit mindestens dieser Sternebewertung zählen als Lieblingsrezept.",
       confirm_wish: "An: Nach dem Antippen eines Rezepts kommt erst eine Rückfrage „… wünschen?“. Aus: Das Rezept wird sofort eingetragen.",
@@ -201,7 +217,7 @@ const EDITOR_I18N = {
     labels: {
       config_entry_id: "Mealie integration", show_header: "Show header", title: "Title", subtitle: "Subtitle", icon: "Icon",
       days: "Number of days", meals: "Meals (columns)", wish_label: "Wish button text",
-      picker: "Picker sections (order)", picker_items: "Recipes per section", history_days: "History for statistics (days)",
+      picker: "Picker sections (order)", pinned_title: "Pinned: heading", pinned_categories: "Pinned: Mealie categories", pinned_tags: "Pinned: Mealie tags", pinned_recipes: "Pinned: single recipes", pinned_notes: "Pinned: without recipe", pinned_exclude_elsewhere: "Hide pinned options from other sections", picker_items: "Recipes per section", history_days: "History for statistics (days)",
       favorites_min_rating: "Favourite from rating", confirm_wish: "Ask before adding",
       allow_free_text: "No result: offer 'Add name as meal'", allow_create_recipe: "No result: offer 'Create recipe in Mealie'",
       recipe_tap_action: "Tap on a planned recipe", allow_open_mealie: "Allow open in Mealie", allow_change: "Allow swapping", allow_remove: "Allow removing",
@@ -218,7 +234,13 @@ const EDITOR_I18N = {
       meals: "Each meal becomes a column. Drag to reorder.",
       wish_label: "Shown in empty slots, e.g. 'Wish a meal'.",
       picker: "Which sections the picker shows and in which order.",
-      picker_items: "How many recipes each section (except search) shows.",
+      picker_items: "How many recipes each section (except search and pinned) shows.",
+      pinned_title: "Heading of the pinned section. Empty = default text.",
+      pinned_categories: "All recipes in these Mealie categories always show as pinned options (name or slug).",
+      pinned_tags: "All recipes with these Mealie tags always show as pinned options.",
+      pinned_recipes: "Single recipes by name or slug that are always shown.",
+      pinned_notes: "Options without a Mealie recipe, e.g. 'Leftovers'. Added to the plan as a note.",
+      pinned_exclude_elsewhere: "On: pinned options do not appear in Random, Favourites etc.",
       history_days: "How far back the meal plan is analysed for 'Most cooked' and 'Not cooked in a while'.",
       favorites_min_rating: "Recipes with at least this star rating count as favourites.",
       confirm_wish: "On: tapping a recipe first asks 'Wish …?'. Off: the recipe is added right away.",
@@ -268,6 +290,12 @@ class MealieWishlistCard extends HTMLElement {
         { type: "expandable", name: "", title: L.sections.picker, flatten: true, schema: [
           { name: "picker", selector: sel(PICKER_SECTIONS.map((p) => ({ value: p, label: p === "search" ? L.search : M[p] }))) },
           { name: "picker_items", selector: { number: { min: 1, max: 12, mode: "box" } } },
+          { name: "pinned_title", selector: { text: {} } },
+          { name: "pinned_categories", selector: { text: { multiple: true } } },
+          { name: "pinned_tags", selector: { text: { multiple: true } } },
+          { name: "pinned_recipes", selector: { text: { multiple: true } } },
+          { name: "pinned_notes", selector: { text: { multiple: true } } },
+          { name: "pinned_exclude_elsewhere", selector: { boolean: {} } },
           { name: "history_days", selector: { number: { min: 14, max: 730, mode: "box" } } },
           { name: "favorites_min_rating", selector: { number: { min: 1, max: 5, step: 0.5, mode: "box" } } },
           { name: "confirm_wish", selector: { boolean: {} } },
@@ -317,6 +345,9 @@ class MealieWishlistCard extends HTMLElement {
     if (!c.meals.length) c.meals = ["dinner"];
     c.picker = (Array.isArray(c.picker) ? c.picker : DEFAULTS.picker).filter((p) => PICKER_SECTIONS.includes(p));
     c.picker_items = Math.max(1, Math.min(12, parseInt(c.picker_items, 10) || 4));
+    const list = (v) => (Array.isArray(v) ? v : typeof v === "string" && v ? v.split(",") : []).map((x) => String(x).trim()).filter(Boolean);
+    c.pinned_categories = list(c.pinned_categories); c.pinned_tags = list(c.pinned_tags);
+    c.pinned_recipes = list(c.pinned_recipes); c.pinned_notes = list(c.pinned_notes);
     c.url = String(c.url || "").replace(/\/+$/, "");
     const old = this._config;
     this._config = c;
@@ -430,11 +461,21 @@ class MealieWishlistCard extends HTMLElement {
     return Math.round((new Date(t.getFullYear(), t.getMonth(), t.getDate()) - parseDate(iso)) / 86400000);
   }
 
+  _isPinned(r) {
+    const c = this._config, k = (x) => norm(x).trim();
+    const cats = c.pinned_categories.map(k), tags = c.pinned_tags.map(k), names = c.pinned_recipes.map(k);
+    return (r.categories || []).some((x) => cats.includes(k(x.name)) || cats.includes(k(x.slug)))
+      || (r.tags || []).some((x) => tags.includes(k(x.name)) || tags.includes(k(x.slug)))
+      || names.includes(k(r.name)) || names.includes(k(r.slug));
+  }
+
   _sections() {
-    const c = this._config, n = c.picker_items, all = this._recipes || [];
+    const c = this._config, n = c.picker_items, everything = this._recipes || [];
+    const pinnedRecipes = everything.filter((r) => this._isPinned(r));
+    const all = c.pinned_exclude_elsewhere && c.picker.includes("pinned") ? everything.filter((r) => !this._isPinned(r)) : everything;
     const { counts, last } = this._stats();
     const t = this._t;
-    const byId = new Map(all.map((r) => [r.recipe_id, r]));
+    const byId = new Map(everything.map((r) => [r.recipe_id, r]));
     const out = {};
     out.favorites_random = shuffle(all.filter((r) => (r.rating || 0) >= c.favorites_min_rating)).slice(0, n)
       .map((r) => ({ r, sub: "★ " + Number(r.rating).toLocaleString(this._config.language || this._hass?.locale?.language || "en") }));
@@ -443,6 +484,7 @@ class MealieWishlistCard extends HTMLElement {
     out.not_cooked_lately = all.map((r) => ({ r, d: last.get(r.recipe_id) || "" })).sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0)).slice(0, n)
       .map((x) => ({ r: x.r, sub: x.d ? t.ago(this._daysAgo(x.d)) : t.never }));
     out.random = shuffle(all).slice(0, n).map((r) => ({ r, sub: "" }));
+    out.pinned = [...pinnedRecipes.map((r) => ({ r, sub: "" })), ...c.pinned_notes.map((note, i) => ({ note, i, sub: "" }))];
     return out;
   }
 
@@ -548,9 +590,11 @@ class MealieWishlistCard extends HTMLElement {
             secs += `<div class="search">${svg(ICONS.search, 18)}<input class="q" type="search" enterkeyhint="search" autocomplete="off" placeholder="${esc(t.search)}" value="${esc(q)}"></div>${ac}`;
           } else {
             const items = s[p] || [];
+            if (p === "pinned" && !items.length) continue;
             const reshuffle = p === "random" || p === "favorites_random";
-            secs += `<div class="sec"><h3><span class="si">${svg(ICONS[p], 16)}</span>${esc(t[p])}${reshuffle ? `<button class="mix" data-act="shuffle" data-sec="${p}">${svg(ICONS.random, 14)} ${esc(t.shuffle)}</button>` : ""}</h3>${
-              items.length ? `<div class="tiles" style="--n:${Math.min(c.picker_items, 4)}">${items.map(({ r, sub }) => {
+            secs += `<div class="sec"><h3><span class="si">${svg(ICONS[p], 16)}</span>${esc(p === "pinned" ? (c.pinned_title || t.pinned) : t[p])}${reshuffle ? `<button class="mix" data-act="shuffle" data-sec="${p}">${svg(ICONS.random, 14)} ${esc(t.shuffle)}</button>` : ""}</h3>${
+              items.length ? `<div class="tiles" style="--n:${Math.min(c.picker_items, 4)}">${items.map(({ r, sub, note, i }) => {
+                if (note !== undefined) return `<button class="tile pin" data-act="pinnote" data-i="${i}"><div class="ph">${svg(ICONS.note, 22)}</div><span>${esc(note)}</span><small>${esc(sub)}</small></button>`;
                 const img = this._img(r);
                 return `<button class="tile" data-act="pick" data-rid="${esc(r.recipe_id)}">${img ? `<img src="${esc(img)}" alt="" loading="lazy" onerror="this.remove()">` : `<div class="ph">${svg(ICONS.fork, 22)}</div>`}<span>${esc(r.name)}</span><small>${esc(sub)}</small></button>`;
               }).join("")}</div>` : `<div class="none">${esc(t.empty_section)}</div>`}</div>`;
@@ -636,6 +680,19 @@ class MealieWishlistCard extends HTMLElement {
     this._toastTimer = setTimeout(() => { this._toast = null; this._render(); }, 2500);
   }
 
+  async _commitNote(name) {
+    const d = this._dialog, t = this._t;
+    if (!d || d.saving) return;
+    d.saving = true;
+    try {
+      if (d.replace) await this._call("update_mealplan", { mealplan_id: String(d.replace.mealplan_id), date: d.date, entry_type: d.meal, note_title: name });
+      else await this._call("set_mealplan", { date: d.date, entry_type: d.meal, note_title: name });
+      this._dialog = null;
+      this._showToast(d.replace ? t.swapped : t.saved);
+      this._refresh();
+    } catch (e) { d.saving = false; d.error = `${t.action_error}: ${e?.message || e}`; this._render(); }
+  }
+
   _findRecipe(id) {
     return (this._recipes || []).find((r) => r.recipe_id === id) || (this._dialog?.remote || []).find((r) => r.recipe_id === id);
   }
@@ -669,18 +726,15 @@ class MealieWishlistCard extends HTMLElement {
       }
       case "close": case "backdrop": this._dialog = null; return this._render();
       case "shuffle": { const d = this._dialog; if (d?.sections && ds.sec) d.sections = { ...d.sections, [ds.sec]: this._sections()[ds.sec] }; return this._render(); }
+      case "pinnote": {
+        const name = c.pinned_notes[parseInt(ds.i, 10)];
+        if (name) return this._commitNote(name);
+        return;
+      }
       case "note": {
         const d = this._dialog, name = (d?.q || "").trim();
         if (!d || !name || d.saving || !c.allow_free_text) return;
-        d.saving = true;
-        try {
-          if (d.replace) await this._call("update_mealplan", { mealplan_id: String(d.replace.mealplan_id), date: d.date, entry_type: d.meal, note_title: name });
-          else await this._call("set_mealplan", { date: d.date, entry_type: d.meal, note_title: name });
-          this._dialog = null;
-          this._showToast(d.replace ? t.swapped : t.saved);
-          this._refresh();
-        } catch (e) { d.saving = false; d.error = `${t.action_error}: ${e?.message || e}`; this._render(); }
-        return;
+        return this._commitNote(name);
       }
       case "pick": {
         const r = this._findRecipe(ds.rid);
@@ -780,7 +834,8 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 @media (max-width:480px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .tile{display:flex;flex-direction:column;background:var(--secondary-background-color,#f1f2f4);border-radius:12px;overflow:hidden;font-size:.82rem;line-height:1.25}
 .tile img,.tile .ph{width:100%;height:64px;object-fit:cover;display:grid;place-items:center;color:var(--secondary-text-color);background:color-mix(in srgb,var(--mw-accent) 10%,transparent)}
-.tile span{padding:6px 8px 2px;overflow-wrap:anywhere}.tile small{padding:0 8px 8px;color:var(--secondary-text-color);min-height:1.1em}
+.tile span{padding:6px 8px 2px;overflow-wrap:anywhere}
+.tile.pin .ph{color:var(--mw-accent)}.tile small{padding:0 8px 8px;color:var(--secondary-text-color);min-height:1.1em}
 .confirm{position:absolute;inset:auto 0 0 0;background:var(--card-background-color,#fff);border-top:1px solid var(--divider-color,#e4e6ea);padding:16px 18px;box-shadow:0 -8px 24px rgba(0,0,0,.12)}
 .confirm p{margin:0 0 12px;font-size:1rem}
 .btns{display:flex;justify-content:flex-end;gap:8px}
@@ -803,7 +858,7 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 
 const EDITOR_DEFAULTS = {
   show_header: true, icon: DEFAULTS.icon, days: DEFAULTS.days, meals: DEFAULTS.meals, picker: DEFAULTS.picker,
-  picker_items: DEFAULTS.picker_items, history_days: DEFAULTS.history_days, favorites_min_rating: DEFAULTS.favorites_min_rating,
+  picker_items: DEFAULTS.picker_items, pinned_exclude_elsewhere: true, history_days: DEFAULTS.history_days, favorites_min_rating: DEFAULTS.favorites_min_rating,
   confirm_wish: false, tile_min_height: 64, allow_free_text: true, allow_create_recipe: true, recipe_tap_action: "details", allow_open_mealie: true, allow_change: true, allow_remove: true, show_images: true,
 };
 
