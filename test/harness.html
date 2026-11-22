@@ -39,6 +39,7 @@ const hass={language:'de',locale:{language:'de'},entities:{'sensor.mealie_rezept
   if(service==='get_recipe'){const r=recipes.find(x=>x.slug===data.recipe_id||x.recipe_id===data.recipe_id);return {context:{},response:{recipe:{...r,ingredients:[{display:'500 g Gnocchi'},{display:'250 g Blattspinat'},{display:'80 ml Hafersahne'}],instructions:[]}}}}
   if(service==='set_mealplan'){const e={mealplan_id:nextId++,entry_type:data.entry_type,mealplan_date:data.date,recipe:recipes.find(r=>r.recipe_id===data.recipe_id)};plan.push(e);return {context:{},response:{mealplan:e}}}
   if(service==='update_mealplan'){const e=plan.find(x=>String(x.mealplan_id)===data.mealplan_id);e.recipe=recipes.find(r=>r.recipe_id===data.recipe_id);return {context:{},response:{mealplan:e}}}
+  if(['delete_mealplan','set_mealplan','update_mealplan'].includes(service)&&ret&&service==='delete_mealplan') throw new Error("Validation error: An action which does not return responses can't be called with return_response=True");
   if(service==='delete_mealplan'){plan=plan.filter(x=>String(x.mealplan_id)!==data.mealplan_id);return {context:{},response:null}}
   throw new Error('unbekannt '+service);
  }};
@@ -88,9 +89,10 @@ window.addEventListener('error',e=>document.title='JSERROR '+e.message);
      const inp=sr.querySelector('input.q'); inp.value='gno'; inp.dispatchEvent(new Event('input')); await wait(100);
    }
    if(step==='confirm'||step==='commit'){ click('.ac .hit'); await wait(50); }
-   if(step==='commit'){ const cb=sr.querySelector('[data-act=commit]'); if(cb) cb.click(); await wait(1300); }
-   if(step==='details'||step==='remove'||step==='change'){ click('[data-act=close]'); await wait(30); click('.meal'); await wait(200); if(step==='details'){ click('[data-act=toggle_details]'); await wait(50); if(!sr.querySelector('.ingr')) throw new Error('Zutaten nicht sichtbar'); } }
+   if(step==='commit'){ const cb=sr.querySelector('[data-act=commit]'); if(cb) cb.click(); await wait(150); if(sr.querySelector('.dialog')) throw new Error('Dialog noch offen'); if(!sr.querySelector('.toast')) throw new Error('keine Meldung'); }
+   if(step==='details'||step==='remove'||step==='change'||step==='doremove'){ click('[data-act=close]'); await wait(30); click('.meal'); await wait(200); if(step==='details'){ click('[data-act=toggle_details]'); await wait(50); if(!sr.querySelector('.ingr')) throw new Error('Zutaten nicht sichtbar'); } }
    if(step==='remove'){ click('[data-act=remove]'); await wait(50); }
+   if(step==='doremove'){ click('[data-act=remove]'); await wait(50); const n=plan.length; click('[data-act=doremove]'); await wait(200); if(plan.length!==n-1) throw new Error('nicht entfernt'); if(sr.querySelector('.dialog')) throw new Error('Dialog offen'); if(!sr.querySelector('.toast')) throw new Error('keine Meldung'); }
    if(step==='change'){ click('[data-act=change]'); await wait(200); click('.tile'); await wait(50); const cb2=sr.querySelector('[data-act=commit]'); if(cb2) cb2.click(); await wait(1300); }
  }
  document.title='OK '+JSON.stringify(CALLS.map(c=>c.service));

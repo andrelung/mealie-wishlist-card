@@ -27,3 +27,4 @@ run breit "step=card&w=1300&cfg=%7B%22meals%22%3A%5B%22lunch%22%2C%22snack%22%2C
 run schmal-3spalten "step=card&w=370" 900 420
 run details-zu "step=remove" 760
 run stable "step=stable" 900
+run doremove "step=doremove" 760

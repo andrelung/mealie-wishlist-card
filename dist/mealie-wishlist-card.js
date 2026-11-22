@@ -7,7 +7,7 @@
  */
 (() => {
 "use strict";
-const MW_VERSION = "0.2.1";
+const MW_VERSION = "0.2.2";
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "side", "dessert", "snack", "drink"];
 const PICKER_SECTIONS = ["search", "favorites_random", "most_cooked", "not_cooked_lately", "random"];
@@ -47,6 +47,9 @@ const I18N = {
     no_results: "Nichts gefunden",
     no_entry: "Bitte im Karteneditor eine Mealie-Integration auswählen.",
     error: "Fehler beim Laden aus Mealie",
+    action_error: "Das hat nicht geklappt",
+    removed: "Aus dem Plan entfernt",
+    swapped: "Getauscht!",
     note: "Notiz",
     loading: "Lädt …",
     empty_section: "Noch keine Daten",
@@ -85,6 +88,9 @@ const I18N = {
     no_results: "No results",
     no_entry: "Please select a Mealie integration in the card editor.",
     error: "Error loading from Mealie",
+    action_error: "That did not work",
+    removed: "Removed from plan",
+    swapped: "Swapped!",
     note: "Note",
     loading: "Loading …",
     empty_section: "No data yet",
@@ -103,6 +109,7 @@ const ICONS = {
   open: "M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z",
   swap: "M21,9L17,5V8H10V10H17V13M7,11L3,15L7,19V16H14V14H7V11Z",
   delete: "M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z",
+  check: "M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z",
 };
 
 const DEFAULTS = {
@@ -255,7 +262,8 @@ class MealieWishlistCard extends HTMLElement {
   }
 
   async _call(service, data = {}) {
-    const res = await this._hass.callService("mealie", service, { config_entry_id: this._config.config_entry_id, ...data }, undefined, false, true);
+    const wantsResponse = service.startsWith("get_");
+    const res = await this._hass.callService("mealie", service, { config_entry_id: this._config.config_entry_id, ...data }, undefined, false, wantsResponse);
     return res?.response ?? res;
   }
 
@@ -397,7 +405,7 @@ class MealieWishlistCard extends HTMLElement {
       : "";
     const oldBody = this.shadowRoot.querySelector(".dbody");
     const keepScroll = oldBody ? oldBody.scrollTop : 0;
-    this.shadowRoot.innerHTML = `<style>${STYLE}</style><ha-card style="--cols:${cols}${c.max_width ? `;--mealie-wishlist-max-width:${esc(c.max_width)}` : ""}">${header}${body}</ha-card>${this._dialogHtml()}`;
+    this.shadowRoot.innerHTML = `<style>${STYLE}</style><ha-card style="--cols:${cols}${c.max_width ? `;--mealie-wishlist-max-width:${esc(c.max_width)}` : ""}">${header}${body}</ha-card>${this._dialogHtml()}${this._toast ? `<div class="toast" role="status">${svg(ICONS.check, 22)}<span>${esc(this._toast)}</span></div>` : ""}`;
     this._applyWidth();
     const newBody = this.shadowRoot.querySelector(".dbody");
     if (newBody && keepScroll) newBody.scrollTop = keepScroll;
@@ -478,12 +486,13 @@ class MealieWishlistCard extends HTMLElement {
         ${facts.length || ingr.length || dlg.loading ? `<button class="more-btn${dlg.showDetails ? " open" : ""}" data-act="toggle_details" aria-expanded="${dlg.showDetails ? "true" : "false"}">${esc(t.details)} <span class="chev">▾</span></button>` : ""}
         ${dlg.showDetails ? `${facts.length ? `<div class="facts">${facts.map((f) => `<span>${esc(f)}</span>`).join("")}</div>` : ""}
         ${dlg.loading ? `<div class="msg">${esc(t.loading)}</div>` : ingr.length ? `<h3>${esc(t.ingredients)}</h3><ul class="ingr">${ingr.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>` : ""}` : ""}
-        </div>${btns.length ? `<div class="actions">${btns.join("")}</div>` : ""}
-        ${dlg.confirmRemove ? `<div class="confirm"><p>${esc(t.remove_confirm(name))}</p><div class="btns"><button class="btn" data-act="noremove">${esc(t.cancel)}</button><button class="btn danger" data-act="doremove">${esc(t.remove)}</button></div></div>` : ""}`;
+        </div>${dlg.confirmRemove
+          ? `<div class="actions confirm-inline"><p>${esc(t.remove_confirm(name))}</p><div class="btns"><button class="btn" data-act="noremove">${esc(t.cancel)}</button><button class="btn danger solid" data-act="doremove"${dlg.saving ? " disabled" : ""}>${svg(ICONS.delete, 18)} ${esc(t.remove)}</button></div></div>`
+          : btns.length ? `<div class="actions">${btns.join("")}</div>` : ""}`;
     }
-    const toast = dlg.toast ? `<div class="toast">${esc(dlg.toast)}</div>` : "";
-    const err = dlg.error ? `<div class="msg err">${esc(dlg.error)}</div>` : "";
-    return `<div class="backdrop" data-act="backdrop"><div class="dialog" role="dialog" aria-modal="true">${inner}${err}${toast}</div></div>`;
+    const err = dlg.error ? `<div class="alert" role="alert">${esc(dlg.error)}</div>` : "";
+    inner = inner.replace(/(<\/div>)(\s*<div class="dbody">)/, `$1${err}$2`);
+    return `<div class="backdrop" data-act="backdrop"><div class="dialog" role="dialog" aria-modal="true">${inner}</div></div>`;
   }
 
   _bind() {
@@ -519,6 +528,13 @@ class MealieWishlistCard extends HTMLElement {
         if (this._dialog && this._dialog.q === q) { this._dialog.remote = r?.recipes?.items || []; this._dialog.remoteQ = q; this._dialog.focusSearch = true; this._render(); }
       } catch (e) { /* ignore, local results stay */ }
     }, 300);
+  }
+
+  _showToast(text) {
+    this._toast = text;
+    this._render();
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => { this._toast = null; this._render(); }, 2500);
   }
 
   _findRecipe(id) {
@@ -569,12 +585,11 @@ class MealieWishlistCard extends HTMLElement {
         try {
           if (d.replace) await this._call("update_mealplan", { mealplan_id: String(d.replace.mealplan_id), date: d.date, entry_type: d.meal, recipe_id: d.pick.recipe_id });
           else await this._call("set_mealplan", { date: d.date, entry_type: d.meal, recipe_id: d.pick.recipe_id });
-          this._dialog = { ...d, pick: null, toast: t.saved, saving: false };
-          this._render();
-          await this._refresh();
-          setTimeout(() => { if (this._dialog?.toast) { this._dialog = null; this._render(); } }, 900);
+          this._dialog = null;
+          this._showToast(d.replace ? t.swapped : t.saved);
+          this._refresh();
         } catch (e) {
-          d.saving = false; d.error = `${t.error}: ${e?.message || e}`; this._render();
+          d.saving = false; d.pick = null; d.error = `${t.action_error}: ${e?.message || e}`; this._render();
         }
         return;
       }
@@ -589,8 +604,9 @@ class MealieWishlistCard extends HTMLElement {
       case "doremove": {
         const e = this._dialog?.entry;
         if (!e || !c.allow_remove) return;
-        try { await this._call("delete_mealplan", { mealplan_id: String(e.mealplan_id) }); this._dialog = null; await this._refresh(); }
-        catch (err) { this._dialog.error = `${t.error}: ${err?.message || err}`; this._render(); }
+        this._dialog.saving = true; this._render();
+        try { await this._call("delete_mealplan", { mealplan_id: String(e.mealplan_id) }); this._dialog = null; this._showToast(t.removed); this._refresh(); }
+        catch (err) { if (this._dialog) { this._dialog.saving = false; this._dialog.confirmRemove = false; this._dialog.error = `${t.action_error}: ${err?.message || err}`; this._render(); } }
         return;
       }
     }
@@ -661,7 +677,11 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 .more-btn .chev{transition:transform .15s}.more-btn.open .chev{transform:rotate(180deg)}
 .facts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}.facts span{background:var(--secondary-background-color,#f1f2f4);border-radius:999px;padding:4px 10px;font-size:.82rem}
 .ingr{margin:0;padding-left:18px;line-height:1.6}
-.toast{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);background:var(--mw-accent);color:var(--text-primary-color,#fff);padding:10px 18px;border-radius:999px;font-weight:600}
+.toast{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:10;display:flex;align-items:center;gap:10px;background:var(--mw-accent);color:var(--text-primary-color,#fff);padding:16px 26px;border-radius:999px;font-weight:600;font-size:1.1rem;box-shadow:0 10px 30px rgba(0,0,0,.35);animation:mwpop .18s ease-out}
+@keyframes mwpop{from{opacity:0;transform:translate(-50%,-50%) scale(.9)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+.alert{margin:0 18px 12px;padding:10px 14px;border-radius:12px;background:color-mix(in srgb,var(--error-color,#db4437) 15%,transparent);color:var(--error-color,#db4437);font-size:.9rem}
+.confirm-inline{flex-direction:column;align-items:stretch}.confirm-inline p{margin:0 0 4px;font-size:1rem}
+.btn.solid{background:var(--error-color,#db4437);color:#fff}.btn[disabled]{opacity:.6}
 `;
 
 const EDITOR_DEFAULTS = {
