@@ -31,6 +31,19 @@ A Home Assistant dashboard card for [Mealie](https://mealie.io). It shows your m
   <img src="images/details.png" width="420" alt="Details of a planned recipe with actions">
 </p>
 
+## Bonus: Next meal tile
+
+The same file also provides `custom:mealie-next-meal-card` – a small tile in the style of the Home Assistant button card for your start page. It shows the next planned meal (e.g. *Today, Dinner: Gnocchi*) and opens your meal plan dashboard on tap.
+
+```yaml
+type: custom:mealie-next-meal-card
+config_entry_id: 01ABCDEF...
+navigation_path: /mealie-wishlist
+meals: [lunch, dinner]      # optional, empty = all
+```
+
+Options: `name`, `icon`, `color`, `days` (look ahead, default 7), `show_image` + `url` (recipe image instead of icon), `meal_times` (when a meal counts as over; defaults breakfast 10:30, lunch 14:30, snack 17:00, dinner 21:00).
+
 ## Requirements
 
 - Home Assistant 2025.1 or newer with the [Mealie integration](https://www.home-assistant.io/integrations/mealie/) set up

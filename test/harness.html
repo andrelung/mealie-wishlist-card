@@ -49,6 +49,19 @@ window.addEventListener('error',e=>document.title='JSERROR '+e.message);
 <script src="../dist/mealie-wishlist-card.js"></script>
 <script>
 (async()=>{
+ if(P.get('step')==='nextmeal'){
+   const wrap=document.getElementById('wrap'); wrap.style.cssText='width:280px;height:240px;display:grid';
+   const nm=document.createElement('mealie-next-meal-card');
+   nm.setConfig({config_entry_id:'E1',...JSON.parse(P.get('cfg')||'{}')}); wrap.appendChild(nm); nm.hass=hass;
+   await new Promise(r=>setTimeout(r,200));
+   const txt=nm.shadowRoot.querySelector('.next')?.textContent||'';
+   const exp=P.get('exp')||'';
+   document.title=(txt.includes(exp)?'OK ':'TESTERROR ')+txt;
+   history.pushState=(s,x,u)=>{window.NAV=u}; let ev=false; window.addEventListener('location-changed',()=>ev=true);
+   nm.shadowRoot.querySelector('ha-card').click();
+   if(P.get('nav')&&(window.NAV!==P.get('nav')||!ev)) document.title='TESTERROR nav '+window.NAV;
+   return;
+ }
  const cfg=JSON.parse(P.get('cfg')||'{}');
  const card=document.createElement('mealie-wishlist-card');
  card.setConfig({config_entry_id:'E1',days:4,meals:['breakfast','lunch','dinner'],...cfg});

@@ -7,7 +7,7 @@
  */
 (() => {
 "use strict";
-const MW_VERSION = "0.4.0";
+const MW_VERSION = "0.5.0";
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "side", "dessert", "snack", "drink"];
 const PICKER_SECTIONS = ["search", "pinned", "favorites_random", "most_cooked", "not_cooked_lately", "random"];
@@ -892,6 +892,154 @@ class MealieWishlistCardEditor extends HTMLElement {
     // Fehlende Schlüssel mit den echten Standardwerten anzeigen (sonst stehen Schalter fälschlich auf aus)
     this._form.data = { ...EDITOR_DEFAULTS, ...this._config };
   }
+}
+
+
+// ---------------------------------------------------------------- Next meal tile
+const NM_TEXT = {
+  de: { name: "Essensplan", nothing: "Noch nichts geplant", wish: "Essen wünschen", today: "Heute", tomorrow: "Morgen", error: "Mealie nicht erreichbar" },
+  en: { name: "Meal plan", nothing: "Nothing planned yet", wish: "Wish a meal", today: "Today", tomorrow: "Tomorrow", error: "Mealie unreachable" },
+};
+const NM_DEFAULT_TIMES = { breakfast: "10:30", lunch: "14:30", snack: "17:00", side: "21:00", dessert: "21:00", drink: "21:00", dinner: "21:00" };
+
+class MealieNextMealCard extends HTMLElement {
+  static getStubConfig(hass) {
+    const entry = Object.values(hass?.entities || {}).find((e) => e.platform === "mealie");
+    return { config_entry_id: entry?.config_entry_id || "", navigation_path: "/mealie-wishlist" };
+  }
+
+  static getConfigForm() {
+    return {
+      schema: [
+        { name: "config_entry_id", required: true, selector: { config_entry: { integration: "mealie" } } },
+        { name: "navigation_path", selector: { navigation: {} } },
+        { name: "name", selector: { text: {} } },
+        { name: "icon", selector: { icon: {} } },
+        { name: "color", selector: { ui_color: {} } },
+        { name: "meals", selector: { select: { multiple: true, mode: "list", options: MEAL_TYPES.map((m) => ({ value: m, label: I18N.en.meals[m] })) } } },
+        { name: "days", selector: { number: { min: 1, max: 14, mode: "box" } } },
+        { name: "show_image", selector: { boolean: {} } },
+        { name: "url", selector: { text: { type: "url" } } },
+      ],
+      computeLabel: (s) => ({
+        config_entry_id: "Mealie integration", navigation_path: "Open on tap (dashboard path)", name: "Name", icon: "Icon", color: "Icon colour",
+        meals: "Meals to consider (empty = all)", days: "Look ahead (days)", show_image: "Show recipe image instead of icon", url: "Mealie URL (for the image)",
+      }[s.name]),
+      computeHelper: (s) => ({
+        navigation_path: "E.g. /mealie-wishlist – the dashboard with the Mealie Wishlist card.",
+        meals: "Only these meal types count as 'next meal'. A meal counts as over after its usual time (breakfast 10:30, lunch 14:30, snack 17:00, dinner 21:00).",
+        show_image: "Needs the Mealie URL.",
+      }[s.name]),
+    };
+  }
+
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this._plan = null;
+    this._error = null;
+    this._lastFetch = 0;
+  }
+
+  setConfig(config) {
+    if (!config) throw new Error("Invalid configuration");
+    this._config = { navigation_path: "/mealie-wishlist", icon: "mdi:silverware-fork-knife", color: "orange", days: 7, meals: [], show_image: false, url: "", ...config };
+    this._config.url = String(this._config.url || "").replace(/\/+$/, "");
+    this._render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    if (Date.now() - this._lastFetch > 5 * 60 * 1000) this._fetch();
+  }
+
+  connectedCallback() { this._tick = setInterval(() => this._render(), 60 * 1000); }
+  disconnectedCallback() { clearInterval(this._tick); }
+  getCardSize() { return 3; }
+  getGridOptions() { return { columns: 6, rows: 2, min_columns: 3, min_rows: 2 }; }
+
+  get _lang() { return (this._hass?.locale?.language || this._hass?.language || "en").slice(0, 2); }
+
+  async _fetch() {
+    if (!this._hass || !this._config?.config_entry_id) return;
+    this._lastFetch = Date.now();
+    const today = new Date();
+    try {
+      const res = await this._hass.callService("mealie", "get_mealplan", {
+        config_entry_id: this._config.config_entry_id, start_date: isoDate(today), end_date: isoDate(addDays(today, this._config.days)),
+      }, undefined, false, true);
+      this._plan = (res?.response ?? res)?.mealplan || [];
+      this._error = null;
+    } catch (e) { this._error = e?.message || String(e); }
+    this._render();
+  }
+
+  _next() {
+    if (!this._plan) return null;
+    const now = new Date();
+    const times = { ...NM_DEFAULT_TIMES, ...(this._config.meal_times || {}) };
+    const allowed = this._config.meals?.length ? this._config.meals : MEAL_TYPES;
+    const order = (m) => { const [h, mi] = String(times[m] || "21:00").split(":").map(Number); return h * 60 + (mi || 0); };
+    const cands = this._plan.filter((e) => allowed.includes(e.entry_type)).map((e) => {
+      const d = parseDate(e.mealplan_date); const end = order(e.entry_type);
+      return { e, end: new Date(d.getFullYear(), d.getMonth(), d.getDate(), Math.floor(end / 60), end % 60) };
+    }).filter((x) => x.end > now).sort((a, b) => a.end - b.end);
+    return cands[0] || null;
+  }
+
+  _render() {
+    if (!this._config) return;
+    const c = this._config, T = NM_TEXT[this._lang] || NM_TEXT.en, M = I18N[this._lang] || I18N.en;
+    const nx = this._next();
+    let line = "";
+    let img = "";
+    if (this._error) line = T.error;
+    else if (this._plan && !nx) line = `${T.nothing} · ${T.wish}`;
+    else if (nx) {
+      const d = parseDate(nx.e.mealplan_date), today = new Date();
+      const diff = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(today.getFullYear(), today.getMonth(), today.getDate())) / 86400000);
+      const day = diff === 0 ? T.today : diff === 1 ? T.tomorrow : d.toLocaleDateString(this._lang, { weekday: "long" });
+      line = `${day}, ${M.meals[nx.e.entry_type] || nx.e.entry_type}: ${nx.e.recipe?.name || nx.e.title || ""}`;
+      if (c.show_image && c.url && nx.e.recipe?.recipe_id && nx.e.recipe.image) img = `${c.url}/api/media/recipes/${encodeURIComponent(nx.e.recipe.recipe_id)}/images/min-original.webp`;
+    }
+    const color = String(c.color || "orange");
+    const cssColor = /^(#|rgb|var\()/.test(color) ? color : `var(--${color}-color, var(--state-icon-color, var(--primary-color)))`;
+    this.shadowRoot.innerHTML = `<style>
+      :host{display:block;height:100%}
+      ha-card{height:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px 12px;cursor:pointer;text-align:center;overflow:hidden}
+      ha-card:focus-visible{outline:2px solid var(--primary-color)}
+      .ic{color:${cssColor};display:flex;flex:0 1 auto;min-height:0}
+      .ic ha-icon{--mdc-icon-size:var(--mealie-next-meal-icon-size,56px)}
+      .img{width:64px;height:64px;border-radius:50%;object-fit:cover;flex:none}
+      .name{font-size:1rem;font-weight:500;color:var(--primary-text-color);line-height:1.2}
+      .next{font-size:.82rem;color:var(--secondary-text-color);line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-width:100%}
+    </style><ha-card tabindex="0" role="button">
+      ${img ? `<img class="img" src="${esc(img)}" alt="" onerror="this.remove()">` : `<div class="ic"><ha-icon icon="${esc(c.icon)}"></ha-icon></div>`}
+      <div class="name">${esc(c.name ?? T.name)}</div>
+      ${line ? `<div class="next">${esc(line)}</div>` : ""}
+    </ha-card>`;
+    const card = this.shadowRoot.querySelector("ha-card");
+    const go = () => {
+      const path = c.navigation_path;
+      if (!path) return;
+      history.pushState(null, "", path);
+      window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
+    };
+    card.addEventListener("click", go);
+    card.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") go(); });
+  }
+}
+
+if (!customElements.get("mealie-next-meal-card")) {
+  customElements.define("mealie-next-meal-card", MealieNextMealCard);
+  window.customCards = window.customCards || [];
+  window.customCards.push({
+    type: "mealie-next-meal-card",
+    name: "Mealie Next Meal",
+    description: "Small tile showing the next planned meal; tap opens your meal plan dashboard.",
+    preview: false,
+    documentationURL: "https://github.com/andrelung/mealie-wishlist-card",
+  });
 }
 
 if (!customElements.get("mealie-wishlist-card-editor")) customElements.define("mealie-wishlist-card-editor", MealieWishlistCardEditor);
