@@ -7,7 +7,7 @@
  */
 (() => {
 "use strict";
-const MW_VERSION = "0.3.2";
+const MW_VERSION = "0.3.3";
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "side", "dessert", "snack", "drink"];
 const PICKER_SECTIONS = ["search", "favorites_random", "most_cooked", "not_cooked_lately", "random"];
@@ -152,6 +152,90 @@ const parseDate = (s) => { const [y, m, d] = String(s).slice(0, 10).split("-").m
 const shuffle = (arr) => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const norm = (s) => String(s || "").toLocaleLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
+
+const EDITOR_I18N = {
+  de: {
+    sections: { header: "Kopfzeile", picker: "Rezeptauswahl", planned: "Geplante Rezepte", look: "Darstellung" },
+    labels: {
+      config_entry_id: "Mealie-Integration", show_header: "Kopfzeile anzeigen", title: "Titel", subtitle: "Untertitel", icon: "Symbol",
+      days: "Anzahl Tage", meals: "Mahlzeiten (Spalten)", wish_label: "Text auf dem Wunsch-Knopf",
+      picker: "Bereiche der Auswahl (Reihenfolge)", picker_items: "Rezepte pro Bereich", history_days: "Zeitraum für Statistik (Tage)",
+      favorites_min_rating: "Lieblingsrezept ab Bewertung", confirm_wish: "Vor dem Eintragen nachfragen",
+      allow_free_text: "Ohne Treffer: „Name als Essen eintragen“ anbieten", allow_create_recipe: "Ohne Treffer: „Rezept in Mealie anlegen“ anbieten",
+      recipe_tap_action: "Tippen auf ein geplantes Rezept", allow_change: "Tauschen erlauben", allow_remove: "Entfernen erlauben",
+      show_images: "Bilder anzeigen", max_width: "Maximale Breite (optional)", tile_min_height: "Mindesthöhe der Kacheln",
+      url: "Mealie-Adresse", language: "Sprache",
+    },
+    helpers: {
+      config_entry_id: "Welche Mealie-Integration die Karte nutzt.",
+      show_header: "Zeigt Symbol, Titel und Untertitel über dem Plan.",
+      title: "Leer lassen für den Standardtext.",
+      subtitle: "Steht rechts in der Kopfzeile. Leer lassen für den Standardtext.",
+      icon: "Leer lassen, um kein Symbol zu zeigen.",
+      days: "Ab heute. Weitere Tage erscheinen untereinander.",
+      meals: "Jede Mahlzeit wird eine Spalte. Reihenfolge per Ziehen.",
+      wish_label: "Steht in leeren Feldern, z. B. „Essen wünschen“.",
+      picker: "Welche Bereiche das Auswahlfenster zeigt und in welcher Reihenfolge.",
+      picker_items: "Wie viele Rezepte jeder Bereich (außer der Suche) zeigt.",
+      history_days: "So weit zurück wird der Speiseplan für „Meist gekocht“ und „Lange nicht gekocht“ ausgewertet.",
+      favorites_min_rating: "Rezepte mit mindestens dieser Sternebewertung zählen als Lieblingsrezept.",
+      confirm_wish: "An: Nach dem Antippen eines Rezepts kommt erst eine Rückfrage „… wünschen?“. Aus: Das Rezept wird sofort eingetragen.",
+      allow_free_text: "Findet die Suche nichts, kann der eingetippte Name als Essen ohne Rezept (Notiz) in den Plan.",
+      allow_create_recipe: "Findet die Suche nichts, öffnet ein Link das Formular „Neues Rezept“ in Mealie. Braucht die Mealie-Adresse.",
+      recipe_tap_action: "Was beim Antippen eines bereits geplanten Essens passiert.",
+      allow_change: "Erlaubt in der Detailansicht „Essen tauschen“.",
+      allow_remove: "Erlaubt in der Detailansicht „Aus Plan entfernen“ (mit Rückfrage).",
+      show_images: "Zeigt Rezeptbilder. Braucht die Mealie-Adresse.",
+      max_width: "Z. B. 900px. Leer = die Karte nutzt die Breite aus dem Layout.",
+      tile_min_height: "In Pixeln. Höhere Kacheln zeigen mehr vom Rezeptbild.",
+      url: "Z. B. https://mealie.example.com – für Bilder und „In Mealie öffnen“. Muss vom anzeigenden Gerät erreichbar sein.",
+      language: "Leer = Sprache von Home Assistant.",
+    },
+    tap: { details: "Details anzeigen", mealie: "In Mealie öffnen", change: "Essen tauschen", none: "Nichts" },
+    search: "Suche",
+  },
+  en: {
+    sections: { header: "Header", picker: "Recipe picker", planned: "Planned recipes", look: "Appearance" },
+    labels: {
+      config_entry_id: "Mealie integration", show_header: "Show header", title: "Title", subtitle: "Subtitle", icon: "Icon",
+      days: "Number of days", meals: "Meals (columns)", wish_label: "Wish button text",
+      picker: "Picker sections (order)", picker_items: "Recipes per section", history_days: "History for statistics (days)",
+      favorites_min_rating: "Favourite from rating", confirm_wish: "Ask before adding",
+      allow_free_text: "No result: offer 'Add name as meal'", allow_create_recipe: "No result: offer 'Create recipe in Mealie'",
+      recipe_tap_action: "Tap on a planned recipe", allow_change: "Allow swapping", allow_remove: "Allow removing",
+      show_images: "Show images", max_width: "Maximum width (optional)", tile_min_height: "Minimum tile height",
+      url: "Mealie URL", language: "Language",
+    },
+    helpers: {
+      config_entry_id: "Which Mealie integration the card uses.",
+      show_header: "Shows icon, title and subtitle above the plan.",
+      title: "Leave empty for the default text.",
+      subtitle: "Shown on the right of the header. Leave empty for the default text.",
+      icon: "Leave empty to show no icon.",
+      days: "Starting today. Further days continue downwards.",
+      meals: "Each meal becomes a column. Drag to reorder.",
+      wish_label: "Shown in empty slots, e.g. 'Wish a meal'.",
+      picker: "Which sections the picker shows and in which order.",
+      picker_items: "How many recipes each section (except search) shows.",
+      history_days: "How far back the meal plan is analysed for 'Most cooked' and 'Not cooked in a while'.",
+      favorites_min_rating: "Recipes with at least this star rating count as favourites.",
+      confirm_wish: "On: tapping a recipe first asks 'Wish …?'. Off: the recipe is added right away.",
+      allow_free_text: "If the search finds nothing, the typed name can be added as a meal without recipe (note).",
+      allow_create_recipe: "If the search finds nothing, a link opens Mealie's 'New recipe' form. Needs the Mealie URL.",
+      recipe_tap_action: "What happens when a planned meal is tapped.",
+      allow_change: "Allows 'Swap meal' in the details.",
+      allow_remove: "Allows 'Remove from plan' in the details (with confirmation).",
+      show_images: "Shows recipe images. Needs the Mealie URL.",
+      max_width: "E.g. 900px. Empty = the card uses the width from the layout.",
+      tile_min_height: "In pixels. Taller tiles show more of the recipe image.",
+      url: "E.g. https://mealie.example.com – for images and 'Open in Mealie'. Must be reachable from the displaying device.",
+      language: "Empty = Home Assistant language.",
+    },
+    tap: { details: "Show details", mealie: "Open in Mealie", change: "Swap meal", none: "Nothing" },
+    search: "Search",
+  },
+};
+
 class MealieWishlistCard extends HTMLElement {
   static getStubConfig(hass) {
     const entry = Object.values(hass?.entities || {}).find((e) => e.platform === "mealie");
@@ -162,22 +246,24 @@ class MealieWishlistCard extends HTMLElement {
     return document.createElement("mealie-wishlist-card-editor");
   }
 
-  static formSpec() {
+  static formSpec(lang = "en") {
+    const L = EDITOR_I18N[lang] || EDITOR_I18N.en;
+    const M = (I18N[lang] || I18N.en);
     const sel = (opts) => ({ select: { multiple: true, mode: "list", reorder: true, options: opts } });
     return {
       schema: [
         { name: "config_entry_id", required: true, selector: { config_entry: { integration: "mealie" } } },
-        { type: "expandable", name: "", title: "Header", flatten: true, schema: [
+        { type: "expandable", name: "", title: L.sections.header, flatten: true, schema: [
           { name: "show_header", selector: { boolean: {} } },
           { name: "title", selector: { text: {} } },
           { name: "subtitle", selector: { text: {} } },
           { name: "icon", selector: { icon: {} } },
         ] },
         { name: "days", selector: { number: { min: 1, max: 31, mode: "box" } } },
-        { name: "meals", selector: sel(MEAL_TYPES.map((m) => ({ value: m, label: I18N.en.meals[m] }))) },
+        { name: "meals", selector: sel(MEAL_TYPES.map((m) => ({ value: m, label: M.meals[m] }))) },
         { name: "wish_label", selector: { text: {} } },
-        { type: "expandable", name: "", title: "Recipe picker", flatten: true, schema: [
-          { name: "picker", selector: sel(PICKER_SECTIONS.map((p) => ({ value: p, label: p === "search" ? "Search" : I18N.en[p] }))) },
+        { type: "expandable", name: "", title: L.sections.picker, flatten: true, schema: [
+          { name: "picker", selector: sel(PICKER_SECTIONS.map((p) => ({ value: p, label: p === "search" ? L.search : M[p] }))) },
           { name: "picker_items", selector: { number: { min: 1, max: 12, mode: "box" } } },
           { name: "history_days", selector: { number: { min: 14, max: 730, mode: "box" } } },
           { name: "favorites_min_rating", selector: { number: { min: 1, max: 5, step: 0.5, mode: "box" } } },
@@ -185,26 +271,21 @@ class MealieWishlistCard extends HTMLElement {
           { name: "allow_free_text", selector: { boolean: {} } },
           { name: "allow_create_recipe", selector: { boolean: {} } },
         ] },
-        { type: "expandable", name: "", title: "Planned recipes", flatten: true, schema: [
-          { name: "recipe_tap_action", selector: { select: { mode: "dropdown", options: [
-            { value: "details", label: "Details" }, { value: "mealie", label: "Open in Mealie" },
-            { value: "change", label: "Swap meal" }, { value: "none", label: "Nothing" } ] } } },
+        { type: "expandable", name: "", title: L.sections.planned, flatten: true, schema: [
+          { name: "recipe_tap_action", selector: { select: { mode: "dropdown", options: ["details", "mealie", "change", "none"].map((v) => ({ value: v, label: L.tap[v] })) } } },
           { name: "allow_change", selector: { boolean: {} } },
           { name: "allow_remove", selector: { boolean: {} } },
         ] },
-        { name: "show_images", selector: { boolean: {} } },
-        { name: "max_width", selector: { text: {} } },
-        { name: "tile_min_height", selector: { number: { min: 40, max: 400, step: 4, mode: "box", unit_of_measurement: "px" } } },
-        { name: "url", selector: { text: { type: "url" } } },
-        { name: "language", selector: { select: { mode: "dropdown", options: [{ value: "de", label: "Deutsch" }, { value: "en", label: "English" }] } } },
+        { type: "expandable", name: "", title: L.sections.look, flatten: true, schema: [
+          { name: "show_images", selector: { boolean: {} } },
+          { name: "tile_min_height", selector: { number: { min: 40, max: 400, step: 4, mode: "box", unit_of_measurement: "px" } } },
+          { name: "max_width", selector: { text: {} } },
+          { name: "url", selector: { text: { type: "url" } } },
+          { name: "language", selector: { select: { mode: "dropdown", options: [{ value: "de", label: "Deutsch" }, { value: "en", label: "English" }] } } },
+        ] },
       ],
-      computeLabel: (s) => ({
-        config_entry_id: "Mealie integration", show_header: "Show header", title: "Title", subtitle: "Subtitle", icon: "Icon",
-        days: "Number of days", meals: "Meals (columns)", wish_label: "Wish button text", picker: "Picker sections (order)",
-        picker_items: "Recipes per section", history_days: "History for statistics (days)", favorites_min_rating: "Favourite = rating at least",
-        confirm_wish: "Ask before wishing", recipe_tap_action: "Tap on planned recipe", allow_change: "Allow swapping",
-        allow_remove: "Allow removing", show_images: "Show images", max_width: "Max. width (e.g. 900px, optional)", tile_min_height: "Min. height of recipe tiles", allow_free_text: "No search result: offer 'Add name as meal'", allow_create_recipe: "No search result: offer 'Create recipe in Mealie' (needs URL)", url: "Mealie URL (images, links)", language: "Language",
-      }[s.name]),
+      computeLabel: (s) => L.labels[s.name] ?? s.name,
+      computeHelper: (s) => L.helpers[s.name],
     };
   }
 
@@ -731,12 +812,14 @@ class MealieWishlistCardEditor extends HTMLElement {
     this._update();
   }
   _update() {
-    if (!this._config || !customElements.get("ha-form")) return;
+    if (!this._config || !this._hass || !customElements.get("ha-form")) return;
     if (!this._form) {
-      const spec = MealieWishlistCard.formSpec();
+      const lang = (this._config?.language || this._hass?.locale?.language || this._hass?.language || "en").slice(0, 2);
+      const spec = MealieWishlistCard.formSpec(lang);
       this._form = document.createElement("ha-form");
       this._form.schema = spec.schema;
       this._form.computeLabel = spec.computeLabel;
+      this._form.computeHelper = spec.computeHelper;
       this._form.addEventListener("value-changed", (ev) => {
         ev.stopPropagation();
         this._config = { ...this._config, ...ev.detail.value };

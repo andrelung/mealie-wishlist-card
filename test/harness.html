@@ -63,11 +63,12 @@ window.addEventListener('error',e=>document.title='JSERROR '+e.message);
    customElements.define('ha-form', class extends HTMLElement{});
    const ed=await customElements.get('mealie-wishlist-card').getConfigElement();
    ed.setConfig({type:'custom:mealie-wishlist-card',config_entry_id:'E1',meals:['lunch']});
+   ed.hass=hass;
    document.body.appendChild(ed); await wait(100);
    const f=ed.querySelector('ha-form'); let got=null;
    ed.addEventListener('config-changed',e=>got=e.detail.config);
    f.dispatchEvent(new CustomEvent('value-changed',{detail:{value:{...f.data,show_header:false}}}));
-   const ok=f.data.show_header===true&&f.data.show_images===true&&f.data.allow_remove===true&&f.data.confirm_wish===false&&f.data.meals[0]==='lunch'&&got&&got.show_header===false;
+   const ok=f.data.show_header===true&&f.data.show_images===true&&f.data.allow_remove===true&&f.data.confirm_wish===false&&f.data.meals[0]==='lunch'&&got&&got.show_header===false&&/Rückfrage/.test(f.computeHelper({name:'confirm_wish'}))&&f.computeLabel({name:'confirm_wish'})==='Vor dem Eintragen nachfragen';
    document.title=(ok?'OK ':'TESTERROR ')+JSON.stringify({sh:f.data.show_header,img:f.data.show_images,got:got&&got.show_header});
    return;
  }
