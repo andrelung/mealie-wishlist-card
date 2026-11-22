@@ -7,7 +7,7 @@
  */
 (() => {
 "use strict";
-const MW_VERSION = "0.1.0";
+const MW_VERSION = "0.1.1";
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "side", "dessert", "snack", "drink"];
 const PICKER_SECTIONS = ["search", "favorites_random", "most_cooked", "not_cooked_lately", "random"];
@@ -140,7 +140,11 @@ class MealieWishlistCard extends HTMLElement {
     return { config_entry_id: entry?.config_entry_id || "", days: 3, meals: ["dinner"] };
   }
 
-  static getConfigForm() {
+  static getConfigElement() {
+    return document.createElement("mealie-wishlist-card-editor");
+  }
+
+  static formSpec() {
     const sel = (opts) => ({ select: { multiple: true, mode: "list", reorder: true, options: opts } });
     return {
       schema: [
@@ -225,13 +229,22 @@ class MealieWishlistCard extends HTMLElement {
 
   getCardSize() { return 1 + this._config.days * 2; }
 
-  getGridOptions() { return { columns: 12, min_columns: 6, rows: "auto" }; }
+  getGridOptions() { return { columns: "full", min_columns: 6, rows: "auto" }; }
 
   connectedCallback() {
     this._timer = setInterval(() => this._hass && this._refresh(), 5 * 60 * 1000);
+    this._ro = new ResizeObserver(() => this._applyWidth());
+    this._ro.observe(this);
   }
 
-  disconnectedCallback() { clearInterval(this._timer); }
+  disconnectedCallback() { clearInterval(this._timer); this._ro?.disconnect(); }
+
+  _applyWidth() {
+    const card = this.shadowRoot.querySelector("ha-card");
+    if (!card || !this._config) return;
+    const need = 110 + this._config.meals.length * 150;
+    card.classList.toggle("narrow", this.clientWidth > 0 && this.clientWidth < need);
+  }
 
   get _t() {
     const lang = this._config?.language || (this._hass?.locale?.language || this._hass?.language || "en").slice(0, 2);
@@ -361,11 +374,11 @@ class MealieWishlistCard extends HTMLElement {
         rows += `<div class="row"><div class="day"><b>${esc(a)}</b><small>${esc(b)}</small></div>`;
         for (const m of c.meals) {
           const entries = this._plan.filter((e) => String(e.mealplan_date).slice(0, 10) === key && e.entry_type === m);
-          const label = cols === 1 ? "" : `<span class="sr">${esc(t.meals[m])}</span>`;
+          const label = cols === 1 ? "" : `<span class="lbl">${esc(t.meals[m])}</span>`;
           if (!entries.length) {
             rows += `<button class="wish" data-act="wish" data-date="${key}" data-meal="${m}">${label}${svg(ICONS.plus, 22)}<span>${esc(wish)}</span></button>`;
           } else {
-            rows += `<div class="cell">${entries.map((e) => {
+            rows += `<div class="cell">${label}${entries.map((e) => {
               const r = e.recipe, img = this._img(r);
               const name = r?.name || e.title || t.note;
               return `<button class="meal${img ? " has-img" : ""}" data-act="planned" data-id="${e.mealplan_id}">${img ? `<img src="${esc(img)}" alt="" loading="lazy" onerror="this.remove()">` : ""}<span>${esc(name)}</span></button>`;
@@ -379,7 +392,8 @@ class MealieWishlistCard extends HTMLElement {
     const header = c.show_header && (title || subtitle || c.icon)
       ? `<div class="header">${c.icon ? `<div class="hicon"><ha-icon icon="${esc(c.icon)}"></ha-icon></div>` : ""}${title ? `<div class="title">${esc(title)}</div>` : ""}${subtitle ? `<div class="subtitle">${esc(subtitle)}</div>` : ""}</div>`
       : "";
-    this.shadowRoot.innerHTML = `<style>${STYLE}</style><ha-card>${header}${body}</ha-card>${this._dialogHtml()}`;
+    this.shadowRoot.innerHTML = `<style>${STYLE}</style><ha-card style="--cols:${cols}">${header}${body}</ha-card>${this._dialogHtml()}`;
+    this._applyWidth();
     this._bind();
     if (this._dialog?.focusSearch) {
       const inp = this.shadowRoot.querySelector("input.q");
@@ -576,7 +590,7 @@ class MealieWishlistCard extends HTMLElement {
 
 const STYLE = `
 :host{--mw-accent:var(--mealie-wishlist-accent,var(--primary-color,#e58325));display:block}
-ha-card{padding:16px 16px 8px;overflow:hidden}
+ha-card{display:block;padding:16px 16px 8px;overflow:hidden;max-width:var(--mealie-wishlist-max-width,calc(140px + var(--cols,1) * 260px));margin:0 auto;box-sizing:border-box}
 .header{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
 .hicon{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:var(--mw-accent);background:color-mix(in srgb,var(--mw-accent) 14%,transparent)}
 .title{font-size:1.15rem;font-weight:600;color:var(--primary-text-color)}
@@ -595,7 +609,12 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 .wish{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:64px;border-radius:12px;border:2px dashed var(--mw-accent);background:color-mix(in srgb,var(--mw-accent) 9%,transparent);color:var(--mw-accent);font-weight:600;font-size:.9rem;text-align:center;padding:6px}
 .wish:hover,.meal:hover,.tile:hover,.hit:hover{filter:brightness(.97)}
 .wish:focus-visible,.meal:focus-visible,.tile:focus-visible{outline:3px solid color-mix(in srgb,var(--mw-accent) 45%,transparent)}
-.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.lbl{display:none;font-size:.72rem;font-weight:500;color:var(--secondary-text-color);margin-bottom:2px}
+.wish .lbl{color:inherit;opacity:.8;margin:0}
+.narrow .row{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+.narrow .row.head{display:none}
+.narrow .day{grid-column:1/-1;flex-direction:row;justify-content:flex-start;align-items:baseline;gap:8px}
+.narrow .lbl{display:block}
 .msg{padding:12px 4px;color:var(--secondary-text-color)}.err{color:var(--error-color,#db4437)}
 .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9;padding:12px}
 .dialog{position:relative;background:var(--card-background-color,#fff);color:var(--primary-text-color);border-radius:22px;width:min(560px,100%);max-height:min(88vh,860px);display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.25);overflow:hidden}
@@ -633,6 +652,44 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 .ingr{margin:0;padding-left:18px;line-height:1.6}
 .toast{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);background:var(--mw-accent);color:var(--text-primary-color,#fff);padding:10px 18px;border-radius:999px;font-weight:600}
 `;
+
+const EDITOR_DEFAULTS = {
+  show_header: true, icon: DEFAULTS.icon, days: DEFAULTS.days, meals: DEFAULTS.meals, picker: DEFAULTS.picker,
+  picker_items: DEFAULTS.picker_items, history_days: DEFAULTS.history_days, favorites_min_rating: DEFAULTS.favorites_min_rating,
+  confirm_wish: true, recipe_tap_action: "details", allow_change: true, allow_remove: true, show_images: true,
+};
+
+class MealieWishlistCardEditor extends HTMLElement {
+  setConfig(config) { this._config = { ...config }; this._update(); }
+  set hass(hass) { this._hass = hass; this._update(); }
+  async connectedCallback() {
+    if (!customElements.get("ha-form") && window.loadCardHelpers) {
+      try { const h = await window.loadCardHelpers(); const c = await h.createCardElement({ type: "entities", entities: [] }); await c.constructor.getConfigElement?.(); } catch (e) { /* ignore */ }
+    }
+    await customElements.whenDefined("ha-form");
+    this._update();
+  }
+  _update() {
+    if (!this._config || !customElements.get("ha-form")) return;
+    if (!this._form) {
+      const spec = MealieWishlistCard.formSpec();
+      this._form = document.createElement("ha-form");
+      this._form.schema = spec.schema;
+      this._form.computeLabel = spec.computeLabel;
+      this._form.addEventListener("value-changed", (ev) => {
+        ev.stopPropagation();
+        this._config = { ...this._config, ...ev.detail.value };
+        this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this._config }, bubbles: true, composed: true }));
+      });
+      this.appendChild(this._form);
+    }
+    if (this._hass) this._form.hass = this._hass;
+    // Fehlende Schlüssel mit den echten Standardwerten anzeigen (sonst stehen Schalter fälschlich auf aus)
+    this._form.data = { ...EDITOR_DEFAULTS, ...this._config };
+  }
+}
+
+if (!customElements.get("mealie-wishlist-card-editor")) customElements.define("mealie-wishlist-card-editor", MealieWishlistCardEditor);
 
 if (!customElements.get("mealie-wishlist-card")) {
   customElements.define("mealie-wishlist-card", MealieWishlistCard);

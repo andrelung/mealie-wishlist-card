@@ -85,7 +85,9 @@ url: https://mealie.example.com        # for images and "Open in Mealie"
 | `mealie_group_slug` | `home` | Group part of recipe links |
 | `language` | HA language | `de` or `en` |
 
-Theme colour: set `--mealie-wishlist-accent` (defaults to `--primary-color`).
+Theme variables: `--mealie-wishlist-accent` (defaults to `--primary-color`), `--mealie-wishlist-max-width` (defaults to a width that fits the number of meal columns; the card is centred). In a narrow column the meals wrap below each day with a small label.
+
+Tip: use a *Panel* view (or full width in a sections view) so the card can take the width it needs.
 
 ## Notes
 

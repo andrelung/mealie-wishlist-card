@@ -22,3 +22,6 @@ run einspaltig "step=card&w=380&cfg=%7B%22meals%22%3A%5B%22dinner%22%5D%2C%22day
 run ohnekopf "step=card&cfg=%7B%22show_header%22%3Afalse%2C%22days%22%3A2%2C%22meals%22%3A%5B%22lunch%22%2C%22dinner%22%2C%22dessert%22%2C%22snack%22%2C%22drink%22%5D%7D" 360 900
 run fehler "step=card&fail=1" 300
 run picker-auswahl "step=picker&cfg=%7B%22picker%22%3A%5B%22random%22%2C%22search%22%5D%2C%22picker_items%22%3A3%7D" 640
+run editor "step=editor" 300
+run breit "step=card&w=1300&cfg=%7B%22meals%22%3A%5B%22lunch%22%2C%22snack%22%2C%22dinner%22%5D%2C%22show_header%22%3Afalse%7D" 640 1360
+run schmal-3spalten "step=card&w=370" 900 420

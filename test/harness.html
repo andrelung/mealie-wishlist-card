@@ -57,6 +57,18 @@ window.addEventListener('error',e=>document.title='JSERROR '+e.message);
  await wait(150);
  const step=P.get('step')||'card';
  try{
+ if(step==='editor'){
+   customElements.define('ha-form', class extends HTMLElement{});
+   const ed=await customElements.get('mealie-wishlist-card').getConfigElement();
+   ed.setConfig({type:'custom:mealie-wishlist-card',config_entry_id:'E1',meals:['lunch']});
+   document.body.appendChild(ed); await wait(100);
+   const f=ed.querySelector('ha-form'); let got=null;
+   ed.addEventListener('config-changed',e=>got=e.detail.config);
+   f.dispatchEvent(new CustomEvent('value-changed',{detail:{value:{...f.data,show_header:false}}}));
+   const ok=f.data.show_header===true&&f.data.show_images===true&&f.data.allow_remove===true&&f.data.confirm_wish===true&&f.data.meals[0]==='lunch'&&got&&got.show_header===false;
+   document.title=(ok?'OK ':'TESTERROR ')+JSON.stringify({sh:f.data.show_header,img:f.data.show_images,got:got&&got.show_header});
+   return;
+ }
  if(step!=='card'){
    click('.wish');
    await wait(200);
