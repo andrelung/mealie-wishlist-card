@@ -1,7 +1,7 @@
 #!/bin/bash
 # Mealie Wishlist: lokale Browser-Tests (Mock-hass, kein HA-Zugriff)
 cd "$(dirname "$0")"
-OUT=out; mkdir -p "$OUT"
+OUT="${TMPDIR:-/tmp}/mealie-wishlist-test"; mkdir -p "$OUT"
 H="file://$PWD/harness.html"
 run() { # name query height
   local t
