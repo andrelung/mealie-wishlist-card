@@ -90,9 +90,9 @@ url: https://mealie.example.com        # for images and "Open in Mealie"
 | `picker` | all | Picker sections and their order: `search`, `pinned`, `favorites_random`, `most_cooked`, `not_cooked_lately`, `random` |
 | `picker_items` | `4` | Recipes per section (not for search and pinned) |
 | `pinned_title` | translated | Heading of the pinned section |
-| `pinned_categories` | `[]` | Mealie categories (name or slug) whose recipes are always pinned |
-| `pinned_tags` | `[]` | Mealie tags (name or slug) whose recipes are always pinned |
-| `pinned_recipes` | `[]` | Single recipes (name or slug) that are always pinned |
+| `pinned_category_ids` | `[]` | IDs of Mealie categories whose recipes are always pinned (picked from a list in the editor) |
+| `pinned_tag_ids` | `[]` | IDs of Mealie tags whose recipes are always pinned (picked from a list) |
+| `pinned_recipe_ids` | `[]` | IDs of single recipes that are always pinned (picked from a list) |
 | `pinned_notes` | `[]` | Pinned options without a recipe; added as meal plan notes |
 | `pinned_exclude_elsewhere` | `true` | Hide pinned recipes from the other sections |
 | `history_days` | `180` | Days of meal plan history used for the statistics |

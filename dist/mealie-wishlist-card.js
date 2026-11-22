@@ -7,7 +7,7 @@
  */
 (() => {
 "use strict";
-const MW_VERSION = "0.5.0";
+const MW_VERSION = "0.6.0";
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "side", "dessert", "snack", "drink"];
 const PICKER_SECTIONS = ["search", "pinned", "favorites_random", "most_cooked", "not_cooked_lately", "random"];
@@ -135,6 +135,9 @@ const DEFAULTS = {
   pinned_categories: [],
   pinned_tags: [],
   pinned_recipes: [],
+  pinned_category_ids: [],
+  pinned_tag_ids: [],
+  pinned_recipe_ids: [],
   pinned_notes: [],
   pinned_exclude_elsewhere: true,
   picker_items: 4,
@@ -170,7 +173,7 @@ const EDITOR_I18N = {
     labels: {
       config_entry_id: "Mealie-Integration", show_header: "Kopfzeile anzeigen", title: "Titel", subtitle: "Untertitel", icon: "Symbol",
       days: "Anzahl Tage", meals: "Mahlzeiten (Spalten)", wish_label: "Text auf dem Wunsch-Knopf",
-      picker: "Bereiche der Auswahl (Reihenfolge)", pinned_title: "Feste Optionen: Überschrift", pinned_categories: "Feste Optionen: Mealie-Kategorien", pinned_tags: "Feste Optionen: Mealie-Tags", pinned_recipes: "Feste Optionen: einzelne Rezepte", pinned_notes: "Feste Optionen: ohne Rezept", pinned_exclude_elsewhere: "Feste Optionen nicht in anderen Bereichen zeigen", picker_items: "Rezepte pro Bereich", history_days: "Zeitraum für Statistik (Tage)",
+      picker: "Bereiche der Auswahl (Reihenfolge)", pinned_title: "Feste Optionen: Überschrift", pinned_category_ids: "Feste Optionen: Mealie-Kategorien", pinned_tag_ids: "Feste Optionen: Mealie-Tags", pinned_recipe_ids: "Feste Optionen: einzelne Rezepte", pinned_notes: "Feste Optionen: ohne Rezept", pinned_exclude_elsewhere: "Feste Optionen nicht in anderen Bereichen zeigen", picker_items: "Rezepte pro Bereich", history_days: "Zeitraum für Statistik (Tage)",
       favorites_min_rating: "Lieblingsrezept ab Bewertung", confirm_wish: "Vor dem Eintragen nachfragen",
       allow_free_text: "Ohne Treffer: „Name als Essen eintragen“ anbieten", allow_create_recipe: "Ohne Treffer: „Rezept in Mealie anlegen“ anbieten",
       recipe_tap_action: "Tippen auf ein geplantes Rezept", allow_open_mealie: "„In Mealie öffnen“ erlauben", allow_change: "Tauschen erlauben", allow_remove: "Entfernen erlauben",
@@ -189,13 +192,13 @@ const EDITOR_I18N = {
       picker: "Welche Bereiche das Auswahlfenster zeigt und in welcher Reihenfolge.",
       picker_items: "Wie viele Rezepte jeder Bereich (außer Suche und festen Optionen) zeigt.",
       pinned_title: "Überschrift des Bereichs „Feste Optionen“. Leer = Standardtext.",
-      pinned_categories: "Alle Rezepte dieser Mealie-Kategorien erscheinen immer als feste Option (Name oder Slug, z. B. „Planung“).",
-      pinned_tags: "Alle Rezepte mit diesen Mealie-Tags erscheinen immer als feste Option.",
-      pinned_recipes: "Einzelne Rezepte per Name oder Slug, die immer angezeigt werden.",
+      pinned_category_ids: "Alle Rezepte dieser Kategorien erscheinen immer als feste Option. Liste kommt aus Mealie (Kategorien, die mindestens einem Rezept zugeordnet sind).",
+      pinned_tag_ids: "Alle Rezepte mit diesen Tags erscheinen immer als feste Option. Liste kommt aus Mealie.",
+      pinned_recipe_ids: "Einzelne Rezepte, die immer als feste Option erscheinen.",
       pinned_notes: "Optionen ohne Rezept in Mealie, z. B. „Reste vom Vortag“. Werden als Notiz in den Plan eingetragen.",
       pinned_exclude_elsewhere: "An: Feste Optionen tauchen nicht in Zufällig, Lieblingsrezepte usw. auf.",
       history_days: "So weit zurück wird der Speiseplan für „Meist gekocht“ und „Lange nicht gekocht“ ausgewertet.",
-      favorites_min_rating: "Rezepte mit mindestens dieser Sternebewertung zählen als Lieblingsrezept.",
+      favorites_min_rating: "Rezepte mit mindestens dieser Sternebewertung zählen automatisch als Lieblingsrezept.",
       confirm_wish: "An: Nach dem Antippen eines Rezepts kommt erst eine Rückfrage „… wünschen?“. Aus: Das Rezept wird sofort eingetragen.",
       allow_free_text: "Findet die Suche nichts, kann der eingetippte Name als Essen ohne Rezept (Notiz) in den Plan.",
       allow_create_recipe: "Findet die Suche nichts, öffnet ein Link das Formular „Neues Rezept“ in Mealie. Braucht die Mealie-Adresse.",
@@ -217,7 +220,7 @@ const EDITOR_I18N = {
     labels: {
       config_entry_id: "Mealie integration", show_header: "Show header", title: "Title", subtitle: "Subtitle", icon: "Icon",
       days: "Number of days", meals: "Meals (columns)", wish_label: "Wish button text",
-      picker: "Picker sections (order)", pinned_title: "Pinned: heading", pinned_categories: "Pinned: Mealie categories", pinned_tags: "Pinned: Mealie tags", pinned_recipes: "Pinned: single recipes", pinned_notes: "Pinned: without recipe", pinned_exclude_elsewhere: "Hide pinned options from other sections", picker_items: "Recipes per section", history_days: "History for statistics (days)",
+      picker: "Picker sections (order)", pinned_title: "Pinned: heading", pinned_category_ids: "Pinned: Mealie categories", pinned_tag_ids: "Pinned: Mealie tags", pinned_recipe_ids: "Pinned: single recipes", pinned_notes: "Pinned: without recipe", pinned_exclude_elsewhere: "Hide pinned options from other sections", picker_items: "Recipes per section", history_days: "History for statistics (days)",
       favorites_min_rating: "Favourite from rating", confirm_wish: "Ask before adding",
       allow_free_text: "No result: offer 'Add name as meal'", allow_create_recipe: "No result: offer 'Create recipe in Mealie'",
       recipe_tap_action: "Tap on a planned recipe", allow_open_mealie: "Allow open in Mealie", allow_change: "Allow swapping", allow_remove: "Allow removing",
@@ -236,13 +239,13 @@ const EDITOR_I18N = {
       picker: "Which sections the picker shows and in which order.",
       picker_items: "How many recipes each section (except search and pinned) shows.",
       pinned_title: "Heading of the pinned section. Empty = default text.",
-      pinned_categories: "All recipes in these Mealie categories always show as pinned options (name or slug).",
-      pinned_tags: "All recipes with these Mealie tags always show as pinned options.",
-      pinned_recipes: "Single recipes by name or slug that are always shown.",
+      pinned_category_ids: "All recipes in these categories always show as pinned options. List comes from Mealie (categories used by at least one recipe).",
+      pinned_tag_ids: "All recipes with these tags always show as pinned options. List comes from Mealie.",
+      pinned_recipe_ids: "Single recipes that always show as pinned options.",
       pinned_notes: "Options without a Mealie recipe, e.g. 'Leftovers'. Added to the plan as a note.",
       pinned_exclude_elsewhere: "On: pinned options do not appear in Random, Favourites etc.",
       history_days: "How far back the meal plan is analysed for 'Most cooked' and 'Not cooked in a while'.",
-      favorites_min_rating: "Recipes with at least this star rating count as favourites.",
+      favorites_min_rating: "Recipes with at least this star rating automatically count as favourites.",
       confirm_wish: "On: tapping a recipe first asks 'Wish …?'. Off: the recipe is added right away.",
       allow_free_text: "If the search finds nothing, the typed name can be added as a meal without recipe (note).",
       allow_create_recipe: "If the search finds nothing, a link opens Mealie's 'New recipe' form. Needs the Mealie URL.",
@@ -271,7 +274,7 @@ class MealieWishlistCard extends HTMLElement {
     return document.createElement("mealie-wishlist-card-editor");
   }
 
-  static formSpec(lang = "en") {
+  static formSpec(lang = "en", opts = null) {
     const L = EDITOR_I18N[lang] || EDITOR_I18N.en;
     const M = (I18N[lang] || I18N.en);
     const sel = (opts) => ({ select: { multiple: true, mode: "list", reorder: true, options: opts } });
@@ -291,9 +294,9 @@ class MealieWishlistCard extends HTMLElement {
           { name: "picker", selector: sel(PICKER_SECTIONS.map((p) => ({ value: p, label: p === "search" ? L.search : M[p] }))) },
           { name: "picker_items", selector: { number: { min: 1, max: 12, mode: "box" } } },
           { name: "pinned_title", selector: { text: {} } },
-          { name: "pinned_categories", selector: { text: { multiple: true } } },
-          { name: "pinned_tags", selector: { text: { multiple: true } } },
-          { name: "pinned_recipes", selector: { text: { multiple: true } } },
+          { name: "pinned_category_ids", selector: { select: { multiple: true, mode: "dropdown", options: opts?.categories || [] } } },
+          { name: "pinned_tag_ids", selector: { select: { multiple: true, mode: "dropdown", options: opts?.tags || [] } } },
+          { name: "pinned_recipe_ids", selector: { select: { multiple: true, mode: "dropdown", options: opts?.recipes || [] } } },
           { name: "pinned_notes", selector: { text: { multiple: true } } },
           { name: "pinned_exclude_elsewhere", selector: { boolean: {} } },
           { name: "history_days", selector: { number: { min: 14, max: 730, mode: "box" } } },
@@ -348,6 +351,7 @@ class MealieWishlistCard extends HTMLElement {
     const list = (v) => (Array.isArray(v) ? v : typeof v === "string" && v ? v.split(",") : []).map((x) => String(x).trim()).filter(Boolean);
     c.pinned_categories = list(c.pinned_categories); c.pinned_tags = list(c.pinned_tags);
     c.pinned_recipes = list(c.pinned_recipes); c.pinned_notes = list(c.pinned_notes);
+    c.pinned_category_ids = list(c.pinned_category_ids); c.pinned_tag_ids = list(c.pinned_tag_ids); c.pinned_recipe_ids = list(c.pinned_recipe_ids);
     c.url = String(c.url || "").replace(/\/+$/, "");
     const old = this._config;
     this._config = c;
@@ -463,6 +467,9 @@ class MealieWishlistCard extends HTMLElement {
 
   _isPinned(r) {
     const c = this._config, k = (x) => norm(x).trim();
+    if ((r.categories || []).some((x) => c.pinned_category_ids.includes(x.category_id))
+      || (r.tags || []).some((x) => c.pinned_tag_ids.includes(x.tag_id))
+      || c.pinned_recipe_ids.includes(r.recipe_id)) return true;
     const cats = c.pinned_categories.map(k), tags = c.pinned_tags.map(k), names = c.pinned_recipes.map(k);
     return (r.categories || []).some((x) => cats.includes(k(x.name)) || cats.includes(k(x.slug)))
       || (r.tags || []).some((x) => tags.includes(k(x.name)) || tags.includes(k(x.slug)))
@@ -872,11 +879,37 @@ class MealieWishlistCardEditor extends HTMLElement {
     await customElements.whenDefined("ha-form");
     this._update();
   }
+  async _loadOptions() {
+    const entry = this._config?.config_entry_id;
+    if (!entry || this._optsFor === entry || !this._hass) return;
+    this._optsFor = entry;
+    try {
+      const res = await this._hass.callService("mealie", "get_recipes", { config_entry_id: entry, result_limit: 100 }, undefined, false, true);
+      const items = (res?.response ?? res)?.recipes?.items || [];
+      const cats = new Map(), tags = new Map();
+      for (const r of items) {
+        for (const x of r.categories || []) cats.set(x.category_id, x.name);
+        for (const x of r.tags || []) tags.set(x.tag_id, x.name);
+      }
+      const sorted = (m) => [...m.entries()].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label));
+      // bereits gespeicherte, aber nicht mehr gefundene IDs sichtbar halten
+      const keep = (list, ids) => { for (const id of ids || []) if (!list.some((o) => o.value === id)) list.push({ value: id, label: `? ${id}` }); return list; };
+      this._opts = {
+        categories: keep(sorted(cats), this._config.pinned_category_ids),
+        tags: keep(sorted(tags), this._config.pinned_tag_ids),
+        recipes: keep(items.map((r) => ({ value: r.recipe_id, label: r.name })).sort((a, b) => a.label.localeCompare(b.label)), this._config.pinned_recipe_ids),
+      };
+    } catch (e) { this._opts = { categories: [], tags: [], recipes: [] }; }
+    if (this._form) { this._form.remove(); this._form = null; }
+    this._update();
+  }
+
   _update() {
     if (!this._config || !this._hass || !customElements.get("ha-form")) return;
+    if (this._config.config_entry_id && this._optsFor !== this._config.config_entry_id) this._loadOptions();
     if (!this._form) {
       const lang = (this._config?.language || this._hass?.locale?.language || this._hass?.language || "en").slice(0, 2);
-      const spec = MealieWishlistCard.formSpec(lang);
+      const spec = MealieWishlistCard.formSpec(lang, this._opts);
       this._form = document.createElement("ha-form");
       this._form.schema = spec.schema;
       this._form.computeLabel = spec.computeLabel;

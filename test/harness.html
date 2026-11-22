@@ -78,7 +78,12 @@ window.addEventListener('error',e=>document.title='JSERROR '+e.message);
    ed.setConfig({type:'custom:mealie-wishlist-card',config_entry_id:'E1',meals:['lunch']});
    ed.hass=hass;
    document.body.appendChild(ed); await wait(100);
+   await wait(150);
    const f=ed.querySelector('ha-form'); let got=null;
+   const findSel=(sch,n)=>{for(const s of sch){if(s.name===n)return s; if(s.schema){const r=findSel(s.schema,n); if(r)return r;}}};
+   const catOpts=(findSel(f.schema,'pinned_category_ids')?.selector?.select?.options)||[];
+   if(!catOpts.some(o=>o.value==='c1'&&o.label==='Planung')) { document.title='TESTERROR Kategorien '+JSON.stringify(catOpts); return; }
+   if(!/automatisch/.test(f.computeHelper({name:'favorites_min_rating'}))) { document.title='TESTERROR Hilfetext'; return; }
    ed.addEventListener('config-changed',e=>got=e.detail.config);
    f.dispatchEvent(new CustomEvent('value-changed',{detail:{value:{...f.data,show_header:false}}}));
    const ok=f.data.show_header===true&&f.data.show_images===true&&f.data.allow_remove===true&&f.data.confirm_wish===false&&f.data.meals[0]==='lunch'&&got&&got.show_header===false&&/Rückfrage/.test(f.computeHelper({name:'confirm_wish'}))&&f.computeLabel({name:'confirm_wish'})==='Vor dem Eintragen nachfragen';
