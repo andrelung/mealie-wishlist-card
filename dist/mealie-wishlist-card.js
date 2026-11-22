@@ -7,7 +7,7 @@
  */
 (() => {
 "use strict";
-const MW_VERSION = "0.3.4";
+const MW_VERSION = "0.3.5";
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "side", "dessert", "snack", "drink"];
 const PICKER_SECTIONS = ["search", "favorites_random", "most_cooked", "not_cooked_lately", "random"];
@@ -156,7 +156,7 @@ const norm = (s) => String(s || "").toLocaleLowerCase().normalize("NFD").replace
 
 const EDITOR_I18N = {
   de: {
-    sections: { header: "Kopfzeile", picker: "Rezeptauswahl", planned: "Geplante Rezepte", look: "Darstellung" },
+    sections: { header: "Kopfzeile", picker: "Rezeptauswahl", planned: "Geplante Rezepte", tiles: "Kacheln (einzelne Felder)", card: "Karte (gesamt)" },
     labels: {
       config_entry_id: "Mealie-Integration", show_header: "Kopfzeile anzeigen", title: "Titel", subtitle: "Untertitel", icon: "Symbol",
       days: "Anzahl Tage", meals: "Mahlzeiten (Spalten)", wish_label: "Text auf dem Wunsch-Knopf",
@@ -164,7 +164,7 @@ const EDITOR_I18N = {
       favorites_min_rating: "Lieblingsrezept ab Bewertung", confirm_wish: "Vor dem Eintragen nachfragen",
       allow_free_text: "Ohne Treffer: „Name als Essen eintragen“ anbieten", allow_create_recipe: "Ohne Treffer: „Rezept in Mealie anlegen“ anbieten",
       recipe_tap_action: "Tippen auf ein geplantes Rezept", allow_open_mealie: "„In Mealie öffnen“ erlauben", allow_change: "Tauschen erlauben", allow_remove: "Entfernen erlauben",
-      show_images: "Bilder anzeigen", max_width: "Maximale Breite (optional)", tile_min_height: "Mindesthöhe der Kacheln",
+      show_images: "Rezeptbilder in den Kacheln", max_width: "Maximale Breite der ganzen Karte (optional)", tile_min_height: "Mindesthöhe jeder Kachel",
       url: "Mealie-Adresse", language: "Sprache",
     },
     helpers: {
@@ -188,8 +188,8 @@ const EDITOR_I18N = {
       allow_change: "Erlaubt in der Detailansicht „Essen tauschen“.",
       allow_remove: "Erlaubt in der Detailansicht „Aus Plan entfernen“ (mit Rückfrage).",
       show_images: "Zeigt Rezeptbilder. Braucht die Mealie-Adresse.",
-      max_width: "Z. B. 900px. Leer = die Karte nutzt die Breite aus dem Layout.",
-      tile_min_height: "In Pixeln. Höhere Kacheln zeigen mehr vom Rezeptbild.",
+      max_width: "Begrenzt die Breite der gesamten Karte, z. B. 900px; sie wird dann mittig angezeigt. Leer = Breite aus dem Layout-Tab.",
+      tile_min_height: "Gilt für jedes einzelne Feld (Rezept oder „Essen wünschen“), in Pixeln. Höhere Felder zeigen mehr vom Rezeptbild.",
       url: "Z. B. https://mealie.example.com – für Bilder und „In Mealie öffnen“. Muss vom anzeigenden Gerät erreichbar sein.",
       language: "Leer = Sprache von Home Assistant.",
     },
@@ -197,7 +197,7 @@ const EDITOR_I18N = {
     search: "Suche",
   },
   en: {
-    sections: { header: "Header", picker: "Recipe picker", planned: "Planned recipes", look: "Appearance" },
+    sections: { header: "Header", picker: "Recipe picker", planned: "Planned recipes", tiles: "Tiles (single slots)", card: "Card (overall)" },
     labels: {
       config_entry_id: "Mealie integration", show_header: "Show header", title: "Title", subtitle: "Subtitle", icon: "Icon",
       days: "Number of days", meals: "Meals (columns)", wish_label: "Wish button text",
@@ -205,7 +205,7 @@ const EDITOR_I18N = {
       favorites_min_rating: "Favourite from rating", confirm_wish: "Ask before adding",
       allow_free_text: "No result: offer 'Add name as meal'", allow_create_recipe: "No result: offer 'Create recipe in Mealie'",
       recipe_tap_action: "Tap on a planned recipe", allow_open_mealie: "Allow open in Mealie", allow_change: "Allow swapping", allow_remove: "Allow removing",
-      show_images: "Show images", max_width: "Maximum width (optional)", tile_min_height: "Minimum tile height",
+      show_images: "Recipe images in tiles", max_width: "Maximum width of the whole card (optional)", tile_min_height: "Minimum height of each tile",
       url: "Mealie URL", language: "Language",
     },
     helpers: {
@@ -229,8 +229,8 @@ const EDITOR_I18N = {
       allow_change: "Allows 'Swap meal' in the details.",
       allow_remove: "Allows 'Remove from plan' in the details (with confirmation).",
       show_images: "Shows recipe images. Needs the Mealie URL.",
-      max_width: "E.g. 900px. Empty = the card uses the width from the layout.",
-      tile_min_height: "In pixels. Taller tiles show more of the recipe image.",
+      max_width: "Limits the width of the whole card, e.g. 900px; it is then centred. Empty = width from the Layout tab.",
+      tile_min_height: "Applies to every single slot (recipe or 'Wish a meal'), in pixels. Taller slots show more of the recipe image.",
       url: "E.g. https://mealie.example.com – for images and 'Open in Mealie'. Must be reachable from the displaying device.",
       language: "Empty = Home Assistant language.",
     },
@@ -280,9 +280,11 @@ class MealieWishlistCard extends HTMLElement {
           { name: "allow_change", selector: { boolean: {} } },
           { name: "allow_remove", selector: { boolean: {} } },
         ] },
-        { type: "expandable", name: "", title: L.sections.look, flatten: true, schema: [
-          { name: "show_images", selector: { boolean: {} } },
+        { type: "expandable", name: "", title: L.sections.tiles, flatten: true, schema: [
           { name: "tile_min_height", selector: { number: { min: 40, max: 400, step: 4, mode: "box", unit_of_measurement: "px" } } },
+          { name: "show_images", selector: { boolean: {} } },
+        ] },
+        { type: "expandable", name: "", title: L.sections.card, flatten: true, schema: [
           { name: "max_width", selector: { text: {} } },
           { name: "url", selector: { text: { type: "url" } } },
           { name: "language", selector: { select: { mode: "dropdown", options: [{ value: "de", label: "Deutsch" }, { value: "en", label: "English" }] } } },

@@ -86,8 +86,8 @@ url: https://mealie.example.com        # for images and "Open in Mealie"
 | `url` | – | Mealie URL, reachable from the device showing the dashboard |
 | `mealie_group_slug` | `home` | Group part of recipe links |
 | `language` | HA language | `de` or `en` |
-| `max_width` | – | Optional maximum width, e.g. `900px` (the card is centred) |
-| `tile_min_height` | `64` | Minimum height of the recipe tiles / wish buttons in px |
+| `max_width` | – | Optional maximum width of the **whole card**, e.g. `900px` (the card is centred) |
+| `tile_min_height` | `64` | Minimum height of **each slot** (recipe tile or wish button) in px |
 | `allow_free_text` | `true` | Search without result: offer to add the typed name as a meal |
 | `allow_create_recipe` | `true` | Search without result: offer the link to Mealie's *Create recipe* form (needs `url`) |
 
