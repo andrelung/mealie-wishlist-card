@@ -19,6 +19,7 @@ const pad=n=>String(n).padStart(2,'0'); const iso=d=>`${d.getFullYear()}-${pad(d
 const day=n=>{const d=new Date();d.setDate(d.getDate()+n);return iso(d)};
 const R=(id,name,extra={})=>({recipe_id:id,user_id:'u',group_id:'g',name,slug:name.toLowerCase().replace(/[^a-z0-9]+/g,'-'),description:'',categories:[],tags:[],tools:[],image:null,rating:null,last_made:null,recipe_servings:2,prep_time:'15 min',perform_time:'25 min',total_time:'40 min',...extra});
 const recipes=[R('r1','Gnocchi mit Spinat',{rating:5}),R('r2','Erdnuss-Tofu-Bowl',{rating:4.5}),R('r3','Waffeln',{rating:4}),R('r4','Linsen-Dal',{last_made:day(-20)+'T18:00:00'}),R('r5','Shakshuka'),R('r6','Rotkohl-Salat'),R('r7','Chili sin Carne',{rating:3}),R('r8','Ofengemüse',{last_made:day(-150)+'T18:00:00'}),R('r9','Kürbis-Gnocchi'),R('r10','Pasta Verde',{rating:4})];
+if(P.get('img')){ Object.assign(recipes[0],{recipe_id:'5d61e22f-3528-4087-87e2-d04bafca5770',image:'x'}); Object.assign(recipes[2],{recipe_id:'f54f59c4-75f5-4740-81bc-a6d8b81b2df0',image:'x'}); Object.assign(recipes[1],{recipe_id:'53345f10-0f84-4911-9a07-2d90104e4011',image:'x'}); }
 let nextId=100;
 let plan=[
  {mealplan_id:1,entry_type:'dinner',mealplan_date:day(0),title:null,description:null,recipe:recipes[0]},

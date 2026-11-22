@@ -89,7 +89,7 @@ url: https://mealie.example.com        # for images and "Open in Mealie"
 | `tile_min_height` | `64` | Minimum height of the recipe tiles / wish buttons in px |
 | `allow_free_text` | `true` | Search without result: offer to add the typed name as a meal |
 
-Theme variables: `--mealie-wishlist-accent` (defaults to `--primary-color`), `--mealie-wishlist-max-width` (defaults to a width that fits the number of meal columns; the card is centred). In a narrow column the meals wrap below each day with a small label.
+Theme variables: `--mealie-wishlist-accent` (defaults to `--primary-color`), `--mealie-wishlist-text-backdrop` (opacity of the text strip over recipe images, default `70%`), `--mealie-wishlist-max-width` (defaults to a width that fits the number of meal columns; the card is centred). In a narrow column the meals wrap below each day with a small label.
 
 **Width:** the card fills the space it gets. In a *sections* view set it in the card's *Layout* tab (grid columns) and widen the section if needed; alternatively use `max_width` or a *panel* view.
 

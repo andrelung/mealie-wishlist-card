@@ -31,3 +31,4 @@ run doremove "step=doremove" 760
 run note "step=note" 760
 run note-ansicht "step=note&shot=1" 640
 run minh "step=minh&cfg=%7B%22tile_min_height%22%3A120%7D" 900
+run bilder "step=card&img=1&cfg=%7B%22url%22%3A%22https%3A%2F%2Frezepte.andrelung.de%22%2C%22tile_min_height%22%3A140%7D" 900 760

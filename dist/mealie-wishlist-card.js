@@ -7,7 +7,7 @@
  */
 (() => {
 "use strict";
-const MW_VERSION = "0.3.0";
+const MW_VERSION = "0.3.1";
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "side", "dessert", "snack", "drink"];
 const PICKER_SECTIONS = ["search", "favorites_random", "most_cooked", "not_cooked_lately", "random"];
@@ -652,8 +652,11 @@ ha-card{display:block;padding:16px 16px 8px;overflow:hidden;max-width:var(--meal
 .cell{display:flex;flex-direction:column;gap:6px;min-width:0}
 button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:pointer;text-align:left}
 .meal{display:flex;flex-direction:column;border-radius:12px;background:var(--secondary-background-color,#f1f2f4);overflow:hidden;min-height:var(--mw-tile-min-h,64px);flex:1;color:var(--primary-text-color)}
-.meal img{width:100%;height:56px;object-fit:cover;display:block}
-.meal span{padding:8px 10px;font-size:.88rem;line-height:1.25;overflow-wrap:anywhere}
+.meal{position:relative}
+.meal img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.meal span{position:relative;padding:8px 10px;font-size:.88rem;line-height:1.25;overflow-wrap:anywhere}
+.meal.has-img{justify-content:flex-end}
+.meal.has-img span{background:color-mix(in srgb,var(--card-background-color,#fff) var(--mealie-wishlist-text-backdrop,70%),transparent);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
 .wish{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:var(--mw-tile-min-h,64px);border-radius:12px;border:2px dashed var(--mw-accent);background:color-mix(in srgb,var(--mw-accent) 9%,transparent);color:var(--mw-accent);font-weight:600;font-size:.9rem;text-align:center;padding:6px}
 .wish:hover,.meal:hover,.tile:hover,.hit:hover{filter:brightness(.97)}
 .wish:focus-visible,.meal:focus-visible,.tile:focus-visible{outline:3px solid color-mix(in srgb,var(--mw-accent) 45%,transparent)}
